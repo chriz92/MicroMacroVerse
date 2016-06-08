@@ -20,65 +20,10 @@ function createSceneGraphContext(gl, shader) {
     shader: shader
   };
 }
-/*
-function calculateViewMatrix() {
-  //compute the camera's matrix
-  var eye = [0,3,5];
-  var center = [0,0,0];
-  var up = [0,1,0];
-  viewMatrix = mat4.lookAt(mat4.create(), eye, center, up);
-  return viewMatrix;
-}
-*/
-/**
- * base node of the scenegraph
- */
-class SceneGraphNode {
-
-  constructor() {
-    this.children = [];
-  }
-
-  /**
-   * appends a new child to this node
-   * @param child the child to append
-   * @returns {SceneGraphNode} the child
-   */
-  append(child) {
-    this.children.push(child);
-    return child;
-  }
-
-  /**
-   * removes a child from this node
-   * @param child
-   * @returns {boolean} whether the operation was successful
-   */
-  remove(child) {
-    var i = this.children.indexOf(child);
-    if (i >= 0) {
-      this.children.splice(i, 1);
-    }
-    return i >= 0;
-  };
-
-  /**
-   * render method to render this scengraph
-   * @param context
-   */
-  render(context) {
-
-    //render all children
-    this.children.forEach(function (c) {
-      return c.render(context);
-    });
-  };
-}
-
 /**
  * a quad node that renders floor plane
  */
-class QuadRenderNode extends SceneGraphNode {
+class QuadRenderNode extends SGNode {
 
   render(context) {
 
@@ -109,7 +54,7 @@ class QuadRenderNode extends SceneGraphNode {
 /**
  * a cube node that renders a cube at its local origin
  */
-class CubeRenderNode extends SceneGraphNode {
+class CubeRenderNode extends SGNode {
 
   render(context) {
 
@@ -138,69 +83,30 @@ class CubeRenderNode extends SceneGraphNode {
 }
 
 /**
- * a transformation node, i.e applied a transformation matrix to its successors
+ * a sphere node that renders a sphere at its local origin
  */
-class TransformationSceneGraphNode extends SceneGraphNode {
-  /**
-   * the matrix to apply
-   * @param matrix
-   */
-  constructor(matrix) {
-    super();
-    this.matrix = matrix || mat4.create();
-  }
+class SphereRenderNode extends SGNode {
 
   render(context) {
-    //backup previous one
-    var previous = context.sceneMatrix;
-    //set current world matrix by multiplying it
-    if (previous === null) {
-      context.sceneMatrix = mat4.clone(this.matrix);
-    }
-    else {
-      context.sceneMatrix = mat4.multiply(mat4.create(), previous, this.matrix);
-    }
 
+    //setting the model view and projection matrix on shader
+    //setUpModelViewMatrix(context.sceneMatrix, context.viewMatrix);
+
+    /*var positionLocation = gl.getAttribLocation(context.shader, 'a_position');
+    gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexBuffer);
+    gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false,0,0) ;
+    gl.enableVertexAttribArray(positionLocation);
+
+    var colorLocation = gl.getAttribLocation(context.shader, 'a_color');
+    gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
+    gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false,0,0) ;
+    gl.enableVertexAttribArray(colorLocation);
+    */
+    //set alpha value for blending
+    //gl.uniform1f(gl.getUniformLocation(context.shader, 'u_alpha'), 0.5);
+
+    makeSphere();
     //render children
     super.render(context);
-    //restore backup
-    context.sceneMatrix = previous;
-  }
-
-  setMatrix(matrix) {
-    this.matrix = matrix;
   }
 }
-
-//TASK 5-0
-/**
- * a shader node sets a specific shader for the successors
- */
-class ShaderSceneGraphNode extends SceneGraphNode {
-  /**
-   * constructs a new shader node with the given shader program
-   * @param shader the shader program to use
-   */
-  constructor(shader) {
-    super();
-    this.shader = shader;
-  }
-
-  render(context) {
-    //backup prevoius one
-    var backup = context.shader;
-    //set current shader
-    context.shader = this.shader;
-    //activate the shader
-    context.gl.useProgram(this.shader);
-    //set projection matrix
-    gl.uniformMatrix4fv(gl.getUniformLocation(context.shader, 'u_projection'),
-      false, context.projectionMatrix);
-    //render children
-    super.render(context);
-    //restore backup
-    context.shader = backup;
-    //activate the shader
-    context.gl.useProgram(backup);
-  }
-};

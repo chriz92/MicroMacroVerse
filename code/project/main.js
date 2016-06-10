@@ -27,7 +27,7 @@
         y: 0
       },
       pos:{
-        x: 0,
+        x: 40,
         y: 0
       }
     };
@@ -90,14 +90,14 @@ canvas.addEventListener('mouseup', function(event){
       camera.rotation.y = 0;
     }
   });
-  document.addEventListener('keypressW', function(event) {
+  document.addEventListener('keypress', function(event) {
       if(event.code == 'KeyW'){
-        camera.pos.x+= 1;
+        camera.pos.x-= 1;
       }
     });
-    document.addEventListener('keypressS', function(event) {
+    document.addEventListener('keypress', function(event) {
         if(event.code == 'KeyS'){
-          camera.pos.x-= 1;
+          camera.pos.x+= 1;
         }
       });
 }
@@ -114,11 +114,14 @@ function render(timeInMilliseconds) {
   //sunTransformationNode.matrix = glm.rotateY(-timeInMilliseconds*0.05);
   updatePlanetTransformations(timeInMilliseconds);
   const context = createSGContext(gl);
-  let lookAtMatrix = mat4.lookAt(mat4.create(), [0,-40,4], [0,0,0], [0,1,0]);
-  //let lookAtMatrix = mat4.lookAt(mat4.create(), glm.translate(0,camera.pos.x,4),[0,0,0],[0,1,0]);
+  //let lookAtMatrix = mat4.lookAt(mat4.create(), [0,-40,4], [0,0,0], [0,1,0]);
+  let lookAtMatrix = mat4.lookAt(mat4.create(),
+                          [0,camera.pos.x,4],
+                          [0,0,0],
+                          [0,1,0]);
   let mouseRotateMatrix = mat4.multiply(mat4.create(),
                           glm.rotateX(camera.rotation.x *0.5),
-                          glm.rotateY(camera.rotation.y*0.5));
+                          glm.rotateY(camera.rotation.y *0.5));
 
   //context.projectionMatrix = mat4.perspective(mat4.create(), 30, gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
   //context.viewMatrix = mat4.lookAt(mat4.create(), [-0,-40,1], [0,0,0], [0,1,0]);

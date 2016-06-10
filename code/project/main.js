@@ -73,7 +73,7 @@ function initInteraction(canvas){
   });
   canvas.addEventListener('mousemove', function(event){
     const pos = toPos(event);
-    const delta = {x:mouse.pos.x - pos.y, y:mouse.pos.y -pos.y};
+    const delta = {x:mouse.pos.x - pos.x, y:mouse.pos.y -pos.y};
     if(mouse.leftButtonDown){
       camera.rotation.x += delta.x;
       camera.rotation.y += delta.y;
@@ -115,9 +115,10 @@ function render(timeInMilliseconds) {
   updatePlanetTransformations(timeInMilliseconds);
   const context = createSGContext(gl);
   let lookAtMatrix = mat4.lookAt(mat4.create(), [0,-40,4], [0,0,0], [0,1,0]);
+  //let lookAtMatrix = mat4.lookAt(mat4.create(), glm.translate(0,camera.pos.x,4),[0,0,0],[0,1,0]);
   let mouseRotateMatrix = mat4.multiply(mat4.create(),
-                          glm.rotateX(camera.rotation.y),
-                          glm.rotateY(camera.rotation.x));
+                          glm.rotateX(camera.rotation.x *0.5),
+                          glm.rotateY(camera.rotation.y*0.5));
 
   //context.projectionMatrix = mat4.perspective(mat4.create(), 30, gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
   //context.viewMatrix = mat4.lookAt(mat4.create(), [-0,-40,1], [0,0,0], [0,1,0]);

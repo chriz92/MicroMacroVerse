@@ -11,17 +11,13 @@
     var planetDistance = new Float32Array([
    0, 5, 6, 9, 16, 26, 40
  ]);
- var planetRotation = new Float32Array([
-   0,0,0,
-   0,0,90,
-   0,0,-45,
-   0,75,7,
-   0,280,22,
-   -30,210,20,
-   0,300,20,
+ var planetOrbitRotation = new Float32Array([
+   0,10,15,-20,12,22,-25
  ]);
-
-    var planetSize = new Float32Array([2, 0.12, 0.20, 0.35, 0.36, 1.2, 0.90]);
+ var planetRotation = new Float32Array([
+   0,10,15,-20,12,22,-25
+ ]);
+    var planetSize = new Float32Array([3, 0.12, 0.20, 0.35, 0.36, 0.8, 0.72]);
     var planetTransformationNodes = [];
     //var moons = new Float32Array([0, 0, 0, 1, 2, 67, 62, 27, 14]);
 
@@ -37,7 +33,7 @@ function init(resources) {
   program = createProgram(gl, resources.vs, resources.fs);
   scene = 1;
   rootNode = new SGNode(); //TODO: global shaders (phong)
-
+  //rootNode.append( new ShaderSGNode(createProgram(gl, resources.vs, resources.fs)));
   switch(scene){
     case 1:
       createSolarSystem(resources, rootNode);
@@ -63,11 +59,10 @@ function render(timeInMilliseconds) {
   updatePlanetTransformations(timeInMilliseconds);
   const context = createSGContext(gl);
   //context.projectionMatrix = mat4.perspective(mat4.create(), 30, gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
-  context.viewMatrix = mat4.lookAt(mat4.create(), [-0,-40,1], [0,0,0], [0,1,0]);
+  context.viewMatrix = mat4.lookAt(mat4.create(), [-0,0,25], [0,0,0], [0,1,0]);
   rootNode.render(context);
   //request another call as soon as possible
   requestAnimationFrame(render);
-
   //animate based on elapsed time
 }
 
@@ -84,16 +79,13 @@ loadResources({
 function createSolarSystem(resources, rootNode){
   function createSphere(){
     return new ShaderSGNode(createProgram(gl, resources.vs, resources.fs), [
-      new RenderSGNode(makeSphere(1,100,100))
+      new RenderSGNode(makeSphere(1,30,30))
     ]);
   }
-  // Sun
-  //sunTransformationNode = new TransformationSGNode(mat4.create(), createSphere());
-  //rootNode.append(sunTransformationNode);
-  //planetTransformationNodes.push(sunTransformationNode);
-  // Planets
+
+  // Adding the Sun and all Planets
   for(i = 0; i < planetSize.length; i++){
-  //for(i = 1; i < 2; i++){
+  //for(i = 0; i < 2; i++){
     planetTransformationNode = new TransformationSGNode(mat4.create(), createSphere());
     rootNode.append(planetTransformationNode);
     planetTransformationNode.append(createSphere());
@@ -102,15 +94,17 @@ function createSolarSystem(resources, rootNode){
 }
 
 function updatePlanetTransformations(timeInMilliseconds){
-    for(i = 0; i < planetSize.length; i++){
-    var transformation = mat4.create();
+    var globalTimeMultiplayer = timeInMilliseconds*0.005; //TODO: respect zoom level
+    for(i = 0; i < planetTransformationNodes.length; i++){
+    //for(i = 0; i < 2; i++){
+      var transformation = mat4.create();
       var scale = planetSize[i];
-      transformation = mat4.multiply(mat4.create(), transformation, glm.rotateX(planetRotation[i*3]));
-      transformation = mat4.multiply(mat4.create(), transformation, glm.rotateY(planetRotation[i*3+1]));
-      transformation = mat4.multiply(mat4.create(), transformation, glm.rotateZ(planetRotation[i*3+2]));
-      transformation = mat4.multiply(mat4.create(), transformation, glm.rotateY(timeInMilliseconds*-0.03))
+      var speedMultipler = (planetTransformationNodes.length - i);
+      transformation = mat4.multiply(mat4.create(), transformation, glm.rotateZ(planetOrbitRotation[i]));
+      transformation = mat4.multiply(mat4.create(), transformation, glm.rotateY(-(speedMultipler*speedMultipler*globalTimeMultiplayer)));
       transformation = mat4.multiply(mat4.create(), transformation, glm.translate(planetDistance[i],0, 0));
       transformation = mat4.multiply(mat4.create(), transformation, glm.scale(scale, scale, scale));
+      transformation = mat4.multiply(mat4.create(), transformation, glm.rotateY(planetRotation[i]*timeInMilliseconds));
       planetTransformationNodes[i].matrix = transformation;
   }
 }

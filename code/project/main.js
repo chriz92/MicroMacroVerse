@@ -21,6 +21,16 @@
     var planetTransformationNodes = [];
     //var moons = new Float32Array([0, 0, 0, 1, 2, 67, 62, 27, 14]);
 
+    const camera = {
+      rotation: {
+        x: 0,
+        y: 0
+      },
+      pos:{
+        x: 0,
+        y: 0
+      }
+    };
 /**
  * initializes OpenGL context, compile shader, and load buffers
  */
@@ -43,8 +53,54 @@ function init(resources) {
     case 3:
       break;
   }
+  initInteraction(gl.canvas);
 }
-
+function initInteraction(canvas){
+  const mouse = {
+    pos:{x:0,y:0},
+    leftButtonDown:false
+  };
+  function toPos(event){
+    const rect = canvas.getBoundingClientRect();
+    return{
+      x: event.clientX- rect.left,
+      y: event.clientY -rect.top
+    };
+  }
+  canvas.addEventListener('mousedown', function(event){
+    mouse.pos = toPos(event);
+    mouse.leftButtonDown = event.button === 0;
+  });
+  canvas.addEventListener('mousemove', function(event){
+    const pos = toPos(event);
+    const delta = {x:mouse.pos.x - pos.y, y:mouse.pos.y -pos.y};
+    if(mouse.leftButtonDown){
+      camera.rotation.x += delta.x;
+      camera.rotation.y += delta.y;
+    }
+    mouse.pos = pos;
+  });
+canvas.addEventListener('mouseup', function(event){
+  mouse.pos = toPos(event);
+  mouse.leftButtonDown = false;
+});
+  document.addEventListener('keypress', function(event) {
+    if(event.code == 'KeyR'){
+      camera.rotation.x = 0;
+      camera.rotation.y = 0;
+    }
+  });
+  document.addEventListener('keypressW', function(event) {
+      if(event.code == 'KeyW'){
+        camera.pos.x+= 1;
+      }
+    });
+    document.addEventListener('keypressS', function(event) {
+        if(event.code == 'KeyS'){
+          camera.pos.x-= 1;
+        }
+      });
+}
 /**
  * render one frame
  */
@@ -58,8 +114,14 @@ function render(timeInMilliseconds) {
   //sunTransformationNode.matrix = glm.rotateY(-timeInMilliseconds*0.05);
   updatePlanetTransformations(timeInMilliseconds);
   const context = createSGContext(gl);
+  let lookAtMatrix = mat4.lookAt(mat4.create(), [0,-40,4], [0,0,0], [0,1,0]);
+  let mouseRotateMatrix = mat4.multiply(mat4.create(),
+                          glm.rotateX(camera.rotation.y),
+                          glm.rotateY(camera.rotation.x));
+
   //context.projectionMatrix = mat4.perspective(mat4.create(), 30, gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
-  context.viewMatrix = mat4.lookAt(mat4.create(), [-0,0,25], [0,0,0], [0,1,0]);
+  //context.viewMatrix = mat4.lookAt(mat4.create(), [-0,-40,1], [0,0,0], [0,1,0]);
+  context.viewMatrix = mat4.multiply(mat4.create(), lookAtMatrix, mouseRotateMatrix);
   rootNode.render(context);
   //request another call as soon as possible
   requestAnimationFrame(render);

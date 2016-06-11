@@ -3,7 +3,6 @@
     var rootNode = null;
     var scene = 0;
     var globalTime;
-    var globalResources = null;
     var sunTransformationNode = null;
     var context;
     var resources;
@@ -19,6 +18,7 @@
  ]);
     var planetSize = new Float32Array([3, 0.12, 0.20, 0.35, 0.36, 0.8, 0.72]);
     var planetTransformationNodes = [];
+    var planetTextures = null;
     //var moons = new Float32Array([0, 0, 0, 1, 2, 67, 62, 27, 14]);
 
     const camera = {
@@ -31,18 +31,41 @@
         y: 0
       }
     };
+
+    //load the shader resources using a utility function
+    loadResources({
+      vs: 'shader/empty.vs.glsl',
+      fs: 'shader/empty.fs.glsl',
+      tex_vs: 'shader/texture.vs.glsl',
+      tex_fs: 'shader/texture.fs.glsl',
+      sunTex: "textures/sun.jpg",
+      planet1Tex: "textures/planet1.jpg",
+      planet2Tex: "textures/planet2.jpg",
+      planet3Tex: "textures/planet3.jpg",
+      planet4Tex: "textures/planet4.jpg",
+      planet5Tex: "textures/planet5.jpg",
+      planet6Tex: "textures/planet6.jpg"
+    }).then(function (resources /*an object containing our keys with the loaded resources*/) {
+      init(resources);
+      //render one frame
+      render(0);
+    });
+
+
 /**
  * initializes OpenGL context, compile shader, and load buffers
  */
 function init(resources) {
-  globalResources = resources;
   //create a GL context
   gl = createContext();
+
+  initTextures(resources);
+
   gl.enable(gl.DEPTH_TEST);
   //compile and link shader program
   program = createProgram(gl, resources.vs, resources.fs);
   scene = 1;
-  rootNode = new SGNode(); //TODO: global shaders (phong)
+  rootNode = new ShaderSGNode(createProgram(gl, resources.tex_vs, resources.tex_fs)); //TODO: global shaders (phong)
   //rootNode.append( new ShaderSGNode(createProgram(gl, resources.vs, resources.fs)));
   switch(scene){
     case 1:
@@ -55,6 +78,12 @@ function init(resources) {
   }
   initInteraction(gl.canvas);
 }
+
+function initTextures(resources){
+  planetTextures = [resources.sunTex,  resources.planet1Tex, resources.planet2Tex, resources.planet3Tex, resources.planet4Tex, resources.planet5Tex, resources.planet6Tex];
+}
+
+
 function initInteraction(canvas){
   const mouse = {
     pos:{x:0,y:0},
@@ -132,29 +161,39 @@ function render(timeInMilliseconds) {
   //animate based on elapsed time
 }
 
-//load the shader resources using a utility function
-loadResources({
-  vs: 'shader/empty.vs.glsl',
-  fs: 'shader/empty.fs.glsl'
-}).then(function (resources /*an object containing our keys with the loaded resources*/) {
-  init(resources);
-  //render one frame
-  render(0);
-});
 
 function createSolarSystem(resources, rootNode){
+  {
+    //initialize light
+    let light = new LightSGNode(); //use now framework implementation of light node
+    light.ambient = [0.2, 0.2, 0.2, 1];
+    light.diffuse = [0.8, 0.8, 0.8, 1];
+    light.specular = [1, 1, 1, 1];
+    light.position = [0, 0, 0];
+
+    rotateLight = new TransformationSGNode(mat4.create());
+    let translateLight = new TransformationSGNode(glm.translate(0,-10,10)); //translating the light is the same as setting the light position
+
+    rotateLight.append(translateLight);
+    translateLight.append(light);
+    translateLight.append(createSphere()); //add sphere for debugging: since we use 0,0,0 as our light position the sphere is at the same position as the light source
+    rootNode.append(rotateLight);
+  }
+
   function createSphere(){
-    return new ShaderSGNode(createProgram(gl, resources.vs, resources.fs), [
-      new RenderSGNode(makeSphere(1,30,30))
-    ]);
+    //return //new ShaderSGNode(createProgram(gl, resources.vs, resources.fs), [
+      return new RenderSGNode(makeSphere(1,30,30));
+    //]);
   }
 
   // Adding the Sun and all Planets
-  for(i = 0; i < planetSize.length; i++){
-  //for(i = 0; i < 2; i++){
-    planetTransformationNode = new TransformationSGNode(mat4.create(), createSphere());
+  //for(i = 0; i < planetSize.length; i++){
+  for(i = 0; i < 1; i++){
+    var planet = new MaterialSGNode(
+      new AdvancedTextureSGNode(planetTextures[i], createSphere())
+    );
+    var  planetTransformationNode = new TransformationSGNode(mat4.create(), planet);
     rootNode.append(planetTransformationNode);
-    planetTransformationNode.append(createSphere());
     planetTransformationNodes.push(planetTransformationNode);
   }
 }

@@ -193,7 +193,7 @@ function createSolarSystem(resources, rootNode){
     light.position = [0, 0, 0];
 
     rotateLight = new TransformationSGNode(mat4.create());
-    let translateLight = new TransformationSGNode(glm.translate(0,-10,10)); //translating the light is the same as setting the light position
+    let translateLight = new TransformationSGNode(glm.translate(0,-20,20)); //translating the light is the same as setting the light position
 
     rotateLight.append(translateLight);
     translateLight.append(light);
@@ -208,8 +208,8 @@ function createSolarSystem(resources, rootNode){
   }
 
   // Adding the Sun and all Planets
-  //for(i = 0; i < planetSize.length; i++){
-  for(i = 0; i < 1; i++){
+  for(i = 0; i < planetSize.length; i++){
+  //for(i = 0; i < 1; i++){
     var planet = new MaterialSGNode(
       new AdvancedTextureSGNode(planetTextures[i], createSphere())
     );

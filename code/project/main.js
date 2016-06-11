@@ -80,7 +80,28 @@ function init(resources) {
 }
 
 function initTextures(resources){
-  planetTextures = [resources.sunTex,  resources.planet1Tex, resources.planet2Tex, resources.planet3Tex, resources.planet4Tex, resources.planet5Tex, resources.planet6Tex];
+   planetTextures = [resources.sunTex,  resources.planet1Tex, resources.planet2Tex, resources.planet3Tex, resources.planet4Tex, resources.planet5Tex, resources.planet6Tex];
+  //planetTextures = [initTexture(resources.sunTex),  initTexture(resources.planet1Tex), initTexture(resources.planet2Tex), initTexture(resources.planet3Tex),
+  //   initTexture(resources.planet4Tex), initTexture(resources.planet5Tex), initTexture(resources.planet6Tex)];
+
+}
+
+function initTexture(resource)
+{
+  elementTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, elementTexture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  gl.texImage2D(gl.TEXTURE_2D, //texture unit target == texture type
+  0, //level of detail level (default 0)
+  gl.RGBA, //internal format of the data in memory
+  gl.RGBA, //image format (should match internal format)
+  gl.UNSIGNED_BYTE, //image data type
+  resource); //actual image data
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  return elementTexture;
 }
 
 
@@ -193,6 +214,11 @@ function createSolarSystem(resources, rootNode){
       new AdvancedTextureSGNode(planetTextures[i], createSphere())
     );
     var  planetTransformationNode = new TransformationSGNode(mat4.create(), planet);
+    planet.ambient = [0, 0, 0, 1];
+    planet.diffuse = [0.1, 0.1, 0.1, 1];
+    planet.specular = [0.5, 0.5, 0.5, 1];
+    planet.shininess = 50.0;
+
     rootNode.append(planetTransformationNode);
     planetTransformationNodes.push(planetTransformationNode);
   }

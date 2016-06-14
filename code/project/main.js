@@ -1,6 +1,6 @@
 //the OpenGL context
     var gl = null, program = null;
-    var rootNode = null;
+    var rootNode = null, envNode = null;
     var scene = 0;
     var globalTime;
     var sunTransformationNode = null;
@@ -76,7 +76,8 @@ function init(resources) {
   scene = 1;
   rootNode = new ShaderSGNode(createProgram(gl, resources.tex_vs, resources.tex_fs)); //TODO: global shaders (phong)
   //rootNode.append( new ShaderSGNode(createProgram(gl, resources.vs, resources.fs)));
-  rootNode.append(new ShaderSGNode(createProgram(gl, resources.env_vs, resources.env_fs)));
+  envNode = new ShaderSGNode(createProgram(gl, resources.env_vs, resources.env_fs));
+  rootNode.append(envNode);
   switch(scene){
     case 1:
       createSolarSystem(resources, rootNode);
@@ -191,6 +192,7 @@ function render(timeInMilliseconds) {
   //context.projectionMatrix = mat4.perspective(mat4.create(), 30, gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
   //context.viewMatrix = mat4.lookAt(mat4.create(), [-0,-40,1], [0,0,0], [0,1,0]);
   context.viewMatrix = mat4.multiply(mat4.create(), lookAtMatrix, mouseRotateMatrix);
+  context.invViewMatrix = mat4.invert(mat4.create(), context.viewMatrix);
   rootNode.render(context);
   //request another call as soon as possible
   requestAnimationFrame(render);
@@ -205,11 +207,10 @@ function createSphere(){
 
 function createSolarSystem(resources, rootNode){
   {
-    {
-      var skybox = new EnvironmentSGNode(envcubetexture, 4, false, new RenderSGNode(makeSphere(50)));
-      //rootNode.append(skybox);
-    }
-
+    let skybox = new EnvironmentSGNode(envcubetexture, 0, false, new RenderSGNode(makeSphere(50,30,30)));
+    envNode.append(skybox);
+  }
+  {
     //initialize light
     let light = new LightSGNode(); //use now framework implementation of light node
     light.ambient = [0.2, 0.2, 0.2, 1];
@@ -222,7 +223,7 @@ function createSolarSystem(resources, rootNode){
 
     rotateLight.append(translateLight);
     translateLight.append(light);
-    translateLight.append(createSphere()); //add sphere for debugging: since we use 0,0,0 as our light position the sphere is at the same position as the light source
+    //translateLight.append(createSphere()); //add sphere for debugging: since we use 0,0,0 as our light position the sphere is at the same position as the light source
     rootNode.append(rotateLight);
   }
 

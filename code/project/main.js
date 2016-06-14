@@ -48,12 +48,12 @@
       planet4Tex: "textures/planet4.jpg",
       planet5Tex: "textures/planet5.jpg",
       planet6Tex: "textures/planet6.jpg",
-      env_pos_x: 'textures/Galaxy_RT.jpg',
-      env_neg_x: 'textures/Galaxy_LT.jpg',
-      env_pos_y: 'textures/Galaxy_DN.jpg',
-      env_neg_y: 'textures/Galaxy_UP.jpg',
-      env_pos_z: 'textures/Galaxy_FT.jpg',
-      env_neg_z: 'textures/Galaxy_BK.jpg',
+      env_pos_x: 'textures/purplenebula_rt.jpg',
+      env_neg_x: 'textures/purplenebula_lf.jpg',
+      env_pos_y: 'textures/purplenebula_dn.jpg',
+      env_neg_y: 'textures/purplenebula_up.jpg',
+      env_pos_z: 'textures/purplenebula_ft.jpg',
+      env_neg_z: 'textures/purplenebula_bk.jpg',
     }).then(function (resources /*an object containing our keys with the loaded resources*/) {
       init(resources);
       //render one frame
@@ -186,8 +186,8 @@ function render(timeInMilliseconds) {
                           [0,0,0],
                           [0,1,0]);
   let mouseRotateMatrix = mat4.multiply(mat4.create(),
-                          glm.rotateX(camera.rotation.x *0.5),
-                          glm.rotateY(camera.rotation.y *0.5));
+                          glm.rotateX(camera.rotation.y *0.5),
+                          glm.rotateY(camera.rotation.x *0.5));
 
   //context.projectionMatrix = mat4.perspective(mat4.create(), 30, gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
   //context.viewMatrix = mat4.lookAt(mat4.create(), [-0,-40,1], [0,0,0], [0,1,0]);

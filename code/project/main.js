@@ -2,12 +2,12 @@
     var gl = null, program = null;
     var rootNode = null, envNode = null;
     var scene = 0;
-    var globalTime;
     var sunTransformationNode = null;
     var context;
     var resources;
     var envcubetexture;
     var animatedAngle = 0;
+    var globalTime = 0;
     var planetDistance = new Float32Array([
    0, 5, 6, 9, 16, 26, 40
  ]);
@@ -27,10 +27,9 @@
         x: 0,
         y: 0
       },
-      pos:{
-        x: -40,
-        y: 0
-      }
+      position: [-40,0,0],
+      velocity: 0,
+      isAccelerating: false
     };
 
     //load the shader resources using a utility function
@@ -61,6 +60,48 @@
     });
 
 
+function updateFreeCamera(context, delta){
+  if(camera.isAccelerating == 0){
+    if (camera.velocity > 0){
+			camera.velocity -= 0.0009 * delta;
+			camera.velocity = Math.max(camera.velocity, 0);
+		}
+		else{
+			camera.velocity += 0.0009 * delta;
+			camera.velocity = Math.min(camera.velocity, 0);
+		}
+  } else{
+    camera.velocity += camera.isAccelerating * 0.0004 * delta;
+    camera.velocity = Math.max(Math.min(camera.velocity, 0.025), -0.025)
+    camera.isAccelerating = 0;
+  }
+
+  direction = [
+    Math.cos(camera.rotation.y) * Math.sin(camera.rotation.x),
+    Math.sin(camera.rotation.y),
+    Math.cos(camera.rotation.y) * Math.cos(camera.rotation.x)
+  ];
+  distance = camera.velocity * delta;
+  camera.position = camera.position.map((x,i) => x + (direction[i] * distance));
+  direction = camera.position.map((x,i) => x + direction[i]);
+  //camera.position.y += direction[1];
+  //camera.position.z += direction[2];
+  let lookAtMatrix = mat4.lookAt(mat4.create(),
+                          camera.position,
+                          direction,
+                          [0,1,0]);
+  context.viewMatrix = lookAtMatrix;
+  /*let mouseRotateMatrix = mat4.multiply(mat4.create(),
+                          glm.rotateX(camera.rotation.x),
+                          glm.rotateY(camera.rotation.y));*/
+
+  //context.projectionMatrix = mat4.perspective(mat4.create(), 30, gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
+  //context.viewMatrix = mat4.lookAt(mat4.create(), [-0,-40,1], [0,0,0], [0,1,0]);
+  //context.viewMatrix = mat4.multiply(mat4.create(), lookAtMatrix, mouseRotateMatrix);
+  context.invViewMatrix = mat4.invert(mat4.create(), context.viewMatrix);
+}
+
+
 /**
  * initializes OpenGL context, compile shader, and load buffers
  */
@@ -83,8 +124,13 @@ function init(resources) {
       createSolarSystem(resources, rootNode);
       break;
     case 2:
+      //earth scene
       break;
     case 3:
+      //atom scene
+      break;
+    case -1:
+      //scene transition;
       break;
   }
   initInteraction(gl.canvas);
@@ -141,8 +187,8 @@ function initInteraction(canvas){
     const pos = toPos(event);
     const delta = {x:mouse.pos.x - pos.x, y:mouse.pos.y -pos.y};
     if(mouse.leftButtonDown){
-      camera.rotation.x += delta.x;
-      camera.rotation.y += delta.y;
+      camera.rotation.x += 0.01 * delta.x;
+      camera.rotation.y += 0.01 * delta.y;
     }
     mouse.pos = pos;
   });
@@ -158,20 +204,25 @@ canvas.addEventListener('mouseup', function(event){
   });
   document.addEventListener('keypress', function(event) {
       if(event.code == 'KeyW'){
-        camera.pos.x-= 1;
+        camera.isAccelerating = 1;
+        //if(camera.velocity < 10) camera.velocity += 0.01;
       }
     });
-    document.addEventListener('keypress', function(event) {
-        if(event.code == 'KeyS'){
-          camera.pos.x+= 1;
-        }
-      });
+  document.addEventListener('keypress', function(event) {
+      if(event.code == 'KeyS'){
+        camera.isAccelerating = -1;
+        //if(camera.velocity > -10) camera.velocity -= 0.01;
+      }
+  });
 }
 /**
  * render one frame
  */
 function render(timeInMilliseconds) {
   checkForWindowResize(gl);
+  var delta = timeInMilliseconds - globalTime;
+  globalTime = timeInMilliseconds;
+
   gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
   gl.clearColor(0.1, 0.1, 0.1, 1.0);
   //clear the buffer
@@ -181,18 +232,19 @@ function render(timeInMilliseconds) {
   updatePlanetTransformations(timeInMilliseconds);
   const context = createSGContext(gl);
   //let lookAtMatrix = mat4.lookAt(mat4.create(), [0,-40,4], [0,0,0], [0,1,0]);
-  let lookAtMatrix = mat4.lookAt(mat4.create(),
-                          [0,camera.pos.x,4],
+  updateFreeCamera(context, delta);
+  /*let lookAtMatrix = mat4.lookAt(mat4.create(),
+                          [0,camera.position.x,4],
                           [0,0,0],
                           [0,1,0]);
   let mouseRotateMatrix = mat4.multiply(mat4.create(),
                           glm.rotateX(camera.rotation.y *0.5),
                           glm.rotateY(camera.rotation.x *0.5));
-
+*/
   //context.projectionMatrix = mat4.perspective(mat4.create(), 30, gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
   //context.viewMatrix = mat4.lookAt(mat4.create(), [-0,-40,1], [0,0,0], [0,1,0]);
-  context.viewMatrix = mat4.multiply(mat4.create(), lookAtMatrix, mouseRotateMatrix);
-  context.invViewMatrix = mat4.invert(mat4.create(), context.viewMatrix);
+  //context.viewMatrix = mat4.multiply(mat4.create(), lookAtMatrix, mouseRotateMatrix);
+  //context.invViewMatrix = mat4.invert(mat4.create(), context.viewMatrix);
   rootNode.render(context);
   //request another call as soon as possible
   requestAnimationFrame(render);
@@ -207,7 +259,7 @@ function createSphere(){
 
 function createSolarSystem(resources, rootNode){
   {
-    let skybox = new EnvironmentSGNode(envcubetexture, 0, false, new RenderSGNode(makeSphere(50,30,30)));
+    let skybox = new EnvironmentSGNode(envcubetexture, 0, false, new RenderSGNode(makeSphere(40,30,30)));
     envNode.append(skybox);
   }
   {

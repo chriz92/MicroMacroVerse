@@ -50,9 +50,9 @@ vec4 calculateSimplePointLight(Light light, Material material, vec3 lightVec, ve
 	vec3 reflectVec = reflect(-lightVec,normalVec);
 	float spec = pow( max( dot(reflectVec, eyeVec), 0.0) , material.shininess);
   material.diffuse = textureColor;
-  material.ambient = textureColor;
+  //material.ambient = textureColor;
   //material.diffuse *= textureColor;
-  //material.ambient *= textureColor;
+  material.ambient *= textureColor;
 	vec4 c_amb  = clamp(light.ambient * material.ambient, 0.0, 1.0);
 	vec4 c_diff = clamp(diffuse * light.diffuse * material.diffuse, 0.0, 1.0);
 	vec4 c_spec = clamp(spec * light.specular * material.specular, 0.0, 1.0);

@@ -187,7 +187,7 @@ function initInteraction(canvas){
     const pos = toPos(event);
     const delta = {x:mouse.pos.x - pos.x, y:mouse.pos.y -pos.y};
     if(mouse.leftButtonDown){
-      camera.rotation.x += 0.01 * delta.x;
+      camera.rotation.x -= 0.01 * delta.x;
       camera.rotation.y += 0.01 * delta.y;
     }
     mouse.pos = pos;
@@ -265,13 +265,13 @@ function createSolarSystem(resources, rootNode){
   {
     //initialize light
     let light = new LightSGNode(); //use now framework implementation of light node
-    light.ambient = [0.2, 0.2, 0.2, 1];
+    light.ambient = [1.0, 1.0, 1.0, 1];
     light.diffuse = [0.8, 0.8, 0.8, 1];
     light.specular = [1, 1, 1, 1];
     light.position = [0, 0, 0];
 
     rotateLight = new TransformationSGNode(mat4.create());
-    let translateLight = new TransformationSGNode(glm.translate(0,-20,20)); //translating the light is the same as setting the light position
+    let translateLight = new TransformationSGNode(glm.translate(0,0,0)); //translating the light is the same as setting the light position
 
     rotateLight.append(translateLight);
     translateLight.append(light);
@@ -290,10 +290,13 @@ function createSolarSystem(resources, rootNode){
       new AdvancedTextureSGNode(planetTextures[i], createSphere())
     );
     var  planetTransformationNode = new TransformationSGNode(mat4.create(), planet);
-    planet.ambient = [0, 0, 0, 1];
-    planet.diffuse = [0.1, 0.1, 0.1, 1];
+    if(i == 0)
+      planet.ambient = [1.0, 1.0, 1.0, 1];
+    else
+      planet.ambient = [0.2, 0.2, 0.2, 1];
+    planet.diffuse = [0.2, 0.2, 0.2, 1];
     planet.specular = [0.5, 0.5, 0.5, 1];
-    planet.shininess = 50.0;
+    planet.shininess = 10.0;
 
     rootNode.append(planetTransformationNode);
     planetTransformationNodes.push(planetTransformationNode);

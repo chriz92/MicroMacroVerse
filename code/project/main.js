@@ -1,33 +1,19 @@
 //the OpenGL context
-    var gl = null, program = null;
-    var rootNode = null, envNode = null;
-    var scene = 0;
-    var sunTransformationNode = null;
+    var gl = null, text = null;
+    var rootNode = null
     var context;
     var resources;
     var envcubetexture;
     var animatedAngle = 0;
     var globalTime = 0;
-    var planetDistance = new Float32Array([
-   0, 5, 6, 9, 16, 26, 40
- ]);
- var planetOrbitRotation = new Float32Array([
-   0,10,15,-20,12,22,-25
- ]);
- var planetRotation = new Float32Array([
-   0,10,15,-20,12,22,-25
- ]);
-    var planetSize = new Float32Array([3, 0.12, 0.20, 0.35, 0.36, 0.8, 0.72]);
-    var planetTransformationNodes = [];
-    var planetTextures = null;
-    //var moons = new Float32Array([0, 0, 0, 1, 2, 67, 62, 27, 14]);
+    var worldTime = 0;
 
     const camera = {
       rotation: {
         x: 0,
         y: 0
       },
-      position: [-40,0,0],
+      position: [0,0,-20],
       velocity: 0,
       isAccelerating: false
     };
@@ -40,6 +26,8 @@
       tex_fs: 'shader/texture.fs.glsl',
       env_vs: 'shader/envmap.vs.glsl',
       env_fs: 'shader/envmap.fs.glsl',
+      hmap_vs: 'shader/hmap.vs.glsl',
+      hmap_fs: 'shader/hmap.fs.glsl',
       sunTex: "textures/sun.jpg",
       planet1Tex: "textures/planet1.jpg",
       planet2Tex: "textures/planet2.jpg",
@@ -47,12 +35,20 @@
       planet4Tex: "textures/planet4.jpg",
       planet5Tex: "textures/planet5.jpg",
       planet6Tex: "textures/planet6.jpg",
-      env_pos_x: 'textures/purplenebula_rt.jpg',
-      env_neg_x: 'textures/purplenebula_lf.jpg',
-      env_pos_y: 'textures/purplenebula_dn.jpg',
-      env_neg_y: 'textures/purplenebula_up.jpg',
-      env_pos_z: 'textures/purplenebula_ft.jpg',
-      env_neg_z: 'textures/purplenebula_bk.jpg',
+      uni_px: 'textures/purplenebula_rt.jpg',
+      uni_nx: 'textures/purplenebula_lf.jpg',
+      uni_py: 'textures/purplenebula_dn.jpg',
+      uni_ny: 'textures/purplenebula_up.jpg',
+      uni_pz: 'textures/purplenebula_ft.jpg',
+      uni_nz: 'textures/purplenebula_bk.jpg',
+      day_px: 'textures/day_rt.bmp',
+      day_nx: 'textures/day_lf.bmp',
+      day_py: 'textures/day_dn.bmp',
+      day_ny: 'textures/day_up.bmp',
+      day_pz: 'textures/day_ft.bmp',
+      day_nz: 'textures/day_bk.bmp',
+      hmap: 'textures/hmap.png',
+      grass:'textures/grass.jpg'
     }).then(function (resources /*an object containing our keys with the loaded resources*/) {
       init(resources);
       //render one frame
@@ -108,41 +104,29 @@ function updateFreeCamera(context, delta){
 function init(resources) {
   //create a GL context
   gl = createContext();
+  //create a 2D context
+  text = create2DContext();
 
-  initTextures(resources);
-  initCubeMap(resources);
   gl.enable(gl.DEPTH_TEST);
   //compile and link shader program
-  program = createProgram(gl, resources.vs, resources.fs);
-  scene = 1;
   rootNode = new ShaderSGNode(createProgram(gl, resources.tex_vs, resources.tex_fs)); //TODO: global shaders (phong)
   //rootNode.append( new ShaderSGNode(createProgram(gl, resources.vs, resources.fs)));
-  envNode = new ShaderSGNode(createProgram(gl, resources.env_vs, resources.env_fs));
-  rootNode.append(envNode);
-  switch(scene){
-    case 1:
-      createSolarSystem(resources, rootNode);
-      break;
-    case 2:
-      //earth scene
-      break;
-    case 3:
-      //atom scene
-      break;
-    case -1:
-      //scene transition;
-      break;
-  }
+  solarsystemNode = new TransformationSGNode(glm.translate(-60, 0, 70));
+  earthNode = new TransformationSGNode(glm.translate(0,0,70));
+  createSolarSystem(solarsystemNode, resources);
+  createEarth(earthNode, resources);
+  rootNode.append(solarsystemNode);
+  rootNode.append(earthNode);
   initInteraction(gl.canvas);
 }
 
-function initCubeMap(resources) {
+function createCubeMap(pos_x, neg_x, pos_y, neg_y, pos_z, neg_z) {
   //create the texture
-  envcubetexture = gl.createTexture();
+  var texture = gl.createTexture();
   //define some texture unit we want to work on
   gl.activeTexture(gl.TEXTURE0);
   //bind the texture to the texture unit
-  gl.bindTexture(gl.TEXTURE_CUBE_MAP, envcubetexture);
+  gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
   //set sampling parameters
   gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
   gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
@@ -151,70 +135,20 @@ function initCubeMap(resources) {
   gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   //set correct image for each side of the cube map
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);//flipping required for our skybox, otherwise images don't fit together
-  gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, resources.env_pos_x);
-  gl.texImage2D(gl.TEXTURE_CUBE_MAP_NEGATIVE_X, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, resources.env_neg_x);
-  gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_Y, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, resources.env_pos_y);
-  gl.texImage2D(gl.TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, resources.env_neg_y);
-  gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_Z, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, resources.env_pos_z);
-  gl.texImage2D(gl.TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, resources.env_neg_z);
+  gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, pos_x);
+  gl.texImage2D(gl.TEXTURE_CUBE_MAP_NEGATIVE_X, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, neg_x);
+  gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_Y, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, pos_y);
+  gl.texImage2D(gl.TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, neg_y);
+  gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_Z, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, pos_z);
+  gl.texImage2D(gl.TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, neg_z);
   //generate mipmaps (optional)
   gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
   //unbind the texture again
   gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+  return texture;
 }
 
-function initTextures(resources){
-   planetTextures = [resources.sunTex,  resources.planet1Tex, resources.planet2Tex, resources.planet3Tex, resources.planet4Tex, resources.planet5Tex, resources.planet6Tex];
-}
 
-function initInteraction(canvas){
-  const mouse = {
-    pos:{x:0,y:0},
-    leftButtonDown:false
-  };
-  function toPos(event){
-    const rect = canvas.getBoundingClientRect();
-    return{
-      x: event.clientX- rect.left,
-      y: event.clientY -rect.top
-    };
-  }
-  canvas.addEventListener('mousedown', function(event){
-    mouse.pos = toPos(event);
-    mouse.leftButtonDown = event.button === 0;
-  });
-  canvas.addEventListener('mousemove', function(event){
-    const pos = toPos(event);
-    const delta = {x:mouse.pos.x - pos.x, y:mouse.pos.y -pos.y};
-    if(mouse.leftButtonDown){
-      camera.rotation.x -= 0.01 * delta.x;
-      camera.rotation.y += 0.01 * delta.y;
-    }
-    mouse.pos = pos;
-  });
-canvas.addEventListener('mouseup', function(event){
-  mouse.pos = toPos(event);
-  mouse.leftButtonDown = false;
-});
-  document.addEventListener('keypress', function(event) {
-    if(event.code == 'KeyR'){
-      camera.rotation.x = 0;
-      camera.rotation.y = 0;
-    }
-  });
-  document.addEventListener('keypress', function(event) {
-      if(event.code == 'KeyW'){
-        camera.isAccelerating = 1;
-        //if(camera.velocity < 10) camera.velocity += 0.01;
-      }
-    });
-  document.addEventListener('keypress', function(event) {
-      if(event.code == 'KeyS'){
-        camera.isAccelerating = -1;
-        //if(camera.velocity > -10) camera.velocity -= 0.01;
-      }
-  });
-}
 /**
  * render one frame
  */
@@ -228,11 +162,16 @@ function render(timeInMilliseconds) {
   //clear the buffer
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  //sunTransformationNode.matrix = glm.rotateY(-timeInMilliseconds*0.05);
-  updatePlanetTransformations(timeInMilliseconds);
+  text.clearRect(0, 0, text.canvas.width, text.canvas.height);
   const context = createSGContext(gl);
-  //let lookAtMatrix = mat4.lookAt(mat4.create(), [0,-40,4], [0,0,0], [0,1,0]);
+  //sunTransformationNode.matrix = glm.rotateY(-timeInMilliseconds*0.05);
+  let min = minDistanceToPlanets(camera.position);
   updateFreeCamera(context, delta);
+  worldTime += delta / Math.max(Math.min(21-min,20), 1); //TODO: change to multiplication to stop animation if outside of scene
+  updatePlanetTransformations(worldTime);
+
+  //let lookAtMatrix = mat4.lookAt(mat4.create(), [0,-40,4], [0,0,0], [0,1,0]);
+
   /*let lookAtMatrix = mat4.lookAt(mat4.create(),
                           [0,camera.position.x,4],
                           [0,0,0],
@@ -247,77 +186,12 @@ function render(timeInMilliseconds) {
   //context.invViewMatrix = mat4.invert(mat4.create(), context.viewMatrix);
   rootNode.render(context);
   //request another call as soon as possible
+  fps = 1000 / delta;
+  text.fillText(Math.round(fps).toString(), 50, 50);
   requestAnimationFrame(render);
   //animate based on elapsed time
 }
 
-function createSphere(){
-  //return //new ShaderSGNode(createProgram(gl, resources.vs, resources.fs), [
-    return new RenderSGNode(makeSphere(1,30,30));
-  //]);
-}
-
-function createSolarSystem(resources, rootNode){
-  {
-    let skybox = new EnvironmentSGNode(envcubetexture, 0, false, new RenderSGNode(makeSphere(40,30,30)));
-    envNode.append(skybox);
-  }
-  {
-    //initialize light
-    let light = new LightSGNode(); //use now framework implementation of light node
-    light.ambient = [1.0, 1.0, 1.0, 1];
-    light.diffuse = [0.8, 0.8, 0.8, 1];
-    light.specular = [1, 1, 1, 1];
-    light.position = [0, 0, 0];
-
-    rotateLight = new TransformationSGNode(mat4.create());
-    let translateLight = new TransformationSGNode(glm.translate(0,0,0)); //translating the light is the same as setting the light position
-
-    rotateLight.append(translateLight);
-    translateLight.append(light);
-    //translateLight.append(createSphere()); //add sphere for debugging: since we use 0,0,0 as our light position the sphere is at the same position as the light source
-    rootNode.append(rotateLight);
-  }
-
-
-
-
-
-  // Adding the Sun and all Planets
-  for(i = 0; i < planetSize.length; i++){
-  //for(i = 0; i < 1; i++){
-    var planet = new MaterialSGNode(
-      new AdvancedTextureSGNode(planetTextures[i], createSphere())
-    );
-    var  planetTransformationNode = new TransformationSGNode(mat4.create(), planet);
-    if(i == 0)
-      planet.ambient = [1.0, 1.0, 1.0, 1];
-    else
-      planet.ambient = [0.2, 0.2, 0.2, 1];
-    planet.diffuse = [0.2, 0.2, 0.2, 1];
-    planet.specular = [0.5, 0.5, 0.5, 1];
-    planet.shininess = 10.0;
-
-    rootNode.append(planetTransformationNode);
-    planetTransformationNodes.push(planetTransformationNode);
-  }
-}
-
-function updatePlanetTransformations(timeInMilliseconds){
-    var globalTimeMultiplayer = timeInMilliseconds*0.005; //TODO: respect zoom level
-    for(i = 0; i < planetTransformationNodes.length; i++){
-    //for(i = 0; i < 2; i++){
-      var transformation = mat4.create();
-      var scale = planetSize[i];
-      var speedMultipler = (planetTransformationNodes.length - i);
-      transformation = mat4.multiply(mat4.create(), transformation, glm.rotateZ(planetOrbitRotation[i]));
-      transformation = mat4.multiply(mat4.create(), transformation, glm.rotateY(-(speedMultipler*speedMultipler*globalTimeMultiplayer)));
-      transformation = mat4.multiply(mat4.create(), transformation, glm.translate(planetDistance[i],0, 0));
-      transformation = mat4.multiply(mat4.create(), transformation, glm.scale(scale, scale, scale));
-      transformation = mat4.multiply(mat4.create(), transformation, glm.rotateY(planetRotation[i]*timeInMilliseconds));
-      planetTransformationNodes[i].matrix = transformation;
-  }
-}
 
 class EnvironmentSGNode extends SGNode {
 
@@ -340,11 +214,138 @@ class EnvironmentSGNode extends SGNode {
     gl.activeTexture(gl.TEXTURE0 + this.textureunit);
     gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.envtexture);
 
+    gl.enable(gl.CULL_FACE);
+    gl.cullFace(gl.BACK); //TODO: delete
+
     //render children
     super.render(context);
 
+    gl.cullFace(gl.BACK); //delete
+    gl.disable(gl.CULL_FACE);
     //clean up
     gl.activeTexture(gl.TEXTURE0 + this.textureunit);
     gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
   }
+}
+
+class TextureHeightmapSGNode extends SGNode {
+  constructor(texture, heightmap,ratio, children ) {
+      super(children);
+      this.texture = texture;
+      this.heightmap = heightmap;
+      this.textureId = -1;
+      this.heightmapId= -1;
+      this.ratio = ratio;
+  }
+
+  init(gl)
+  {
+    this.textureId = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.textureId);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.magFilter || gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.minFilter || gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this.wrapS || gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this.wrapT || gl.REPEAT);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.texture);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    this.heightmapId = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.heightmapId);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.magFilter || gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.minFilter || gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this.wrapS || gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this.wrapT || gl.REPEAT);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.heightmap);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+  }
+
+  render(context)
+  {
+    if(this.textureId == -1){
+      this.init(context.gl);
+    }
+    //tell shader to use our texture
+    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableObjectTexture'), 1);
+    //set additional shader parameters
+    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_tex'), 0);
+    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_heightmap'), 1);
+    var wratio = this.heightmap.width / this.texture.width;
+    var hratio = this.heightmap.height /this.texture.height;
+    gl.uniform2f(gl.getUniformLocation(context.shader, 'u_ratio'), this.ratio[0] , this.ratio[1]);
+
+    //Texture0 buffer
+    //Texture1
+
+    //activate/select texture unit and bind texture
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.textureId);
+
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.heightmapId);
+
+    //render children
+    super.render(context);
+
+    //clean up
+    gl.activeTexture(gl.TEXTURE1); //set active texture unit since it might have changed in children render functions
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    gl.activeTexture(gl.TEXTURE0); //set active texture unit since it might have changed in children render functions
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    //disable texturing in shader
+    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableObjectTexture'), 0);
+  }
+}
+
+
+function initInteraction(canvas){
+  const mouse = {
+    pos:{x:0,y:0},
+    leftButtonDown:false
+  };
+  function toPos(event){
+    const rect = canvas.getBoundingClientRect();
+    return{
+      x: event.clientX- rect.left,
+      y: event.clientY -rect.top
+    };
+  }
+  canvas.addEventListener('mousedown', function(event){
+    mouse.pos = toPos(event);
+    mouse.leftButtonDown = event.button === 0;
+  });
+  canvas.addEventListener('mousemove', function(event){
+    const pos = toPos(event);
+    const delta = {x:mouse.pos.x - pos.x, y:mouse.pos.y -pos.y};
+    if(mouse.leftButtonDown){
+      //var new_x = camera.rotation.x - 0.01 * delta.x
+      //var new_y = camera.rotation.y - 0.01 * delta.x
+      camera.rotation.x -= 0.01 * delta.x;
+      camera.rotation.y += 0.01 * delta.y;
+    }
+    mouse.pos = pos;
+  });
+canvas.addEventListener('mouseup', function(event){
+  mouse.pos = toPos(event);
+  mouse.leftButtonDown = false;
+});
+  document.addEventListener('keypress', function(event) {
+    if(event.code == 'KeyR'){
+      camera.rotation.x = 45;
+      camera.rotation.y = 0;
+    }
+  });
+  document.addEventListener('keypress', function(event) {
+      if(event.code == 'KeyW'){
+        camera.isAccelerating = 1;
+        //if(camera.velocity < 10) camera.velocity += 0.01;
+      }
+    });
+  document.addEventListener('keypress', function(event) {
+      if(event.code == 'KeyS'){
+        camera.isAccelerating = -1;
+        //if(camera.velocity > -10) camera.velocity -= 0.01;
+      }
+  });
 }

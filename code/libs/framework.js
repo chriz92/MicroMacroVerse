@@ -1025,3 +1025,19 @@ var sg = {
   },
   context: createSGContext
 };
+
+// TEAM CREATED FRAMEWORK EXTENSIONS
+
+/**
+ * creates a WebGLRenderingContext along with a canvas to render to
+ * @param width
+ * @param height
+ * @returns {WebGLRenderingContext}
+ */
+function create2DContext(width, height) {
+  var canvas = document.createElement('canvas');
+  canvas.width = width || 400;
+  canvas.height = height || 400;
+  document.body.appendChild(canvas);
+  return canvas.getContext('2d');
+}

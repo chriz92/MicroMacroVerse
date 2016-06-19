@@ -10,6 +10,7 @@ uniform mat4 u_projection;
 uniform mat4 u_invView;
 
 uniform vec3 u_lightPos;
+uniform vec3 u_spotDirection;
 uniform sampler2D u_heightmap;
 uniform vec2 u_hmapSize;
 
@@ -17,6 +18,7 @@ uniform vec2 u_hmapSize;
 varying vec3 v_normalVec;
 varying vec3 v_eyeVec;
 varying vec3 v_lightVec;
+varying vec3 v_spotVec;
 
 varying vec2 v_texCoord;
 
@@ -34,20 +36,17 @@ void main() {
 	float left = getHeight(a_texCoord - x);
 	float right = getHeight(a_texCoord + x);
 
+	vec3 horizontal = vec3(2, right - left, 0);
+	vec3 vertical = vec3(0, bottom - top, 2);
 
 	vec3 offset = vec3(0,0, height);
 	vec4 eyePosition = u_modelView * vec4(a_position + offset, 1);
-
-
-
-
-	vec3 horizontal = vec3(2, right - left, 0);
-	vec3 vertical = vec3(0, bottom - top, 2);
 
   v_normalVec = u_normalMatrix * normalize(cross(vertical, horizontal));
 
   v_eyeVec = -eyePosition.xyz;
 	v_lightVec = u_lightPos - eyePosition.xyz;
+	v_spotVec = normalize(u_spotDirection);
 	v_texCoord = a_texCoord;
 
 	gl_Position = u_projection * eyePosition;

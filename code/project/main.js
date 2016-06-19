@@ -175,23 +175,9 @@ function render(timeInMilliseconds) {
   let min = minDistanceToPlanets(camera.position);
   updateFreeCamera(context, delta);
   worldTime += delta / Math.max(Math.min(21-min,20), 1); //TODO: change to multiplication to stop animation if outside of scene
-  updatePlanetTransformations(worldTime);
+  updatePlanetTransformations(timeInMilliseconds);
   updateBirdTransformation(timeInMilliseconds, delta);
-  updateAtomTransformations(worldTime);
-  //let lookAtMatrix = mat4.lookAt(mat4.create(), [0,-40,4], [0,0,0], [0,1,0]);
-
-  /*let lookAtMatrix = mat4.lookAt(mat4.create(),
-                          [0,camera.position.x,4],
-                          [0,0,0],
-                          [0,1,0]);
-  let mouseRotateMatrix = mat4.multiply(mat4.create(),
-                          glm.rotateX(camera.rotation.y *0.5),
-                          glm.rotateY(camera.rotation.x *0.5));
-*/
-  //context.projectionMatrix = mat4.perspective(mat4.create(), 30, gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
-  //context.viewMatrix = mat4.lookAt(mat4.create(), [-0,-40,1], [0,0,0], [0,1,0]);
-  //context.viewMatrix = mat4.multiply(mat4.create(), lookAtMatrix, mouseRotateMatrix);
-  //context.invViewMatrix = mat4.invert(mat4.create(), context.viewMatrix);
+  updateAtomTransformations(timeInMilliseconds);
   rootNode.render(context);
   //request another call as soon as possible
   fps = 1000 / delta;

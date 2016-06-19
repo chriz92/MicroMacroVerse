@@ -88,7 +88,7 @@ function makePlane(width, height){
     }
 
 function createEarth(rootNode, resources){
-  var hmapNode = new ShaderSGNode(createProgram(gl, resources.hmap_vs, resources.hmap_fs));
+  var hmapNode = new ShaderSGNode(createProgram(gl, resources.hmap_vs, resources.tex_fs));
   rootNode.append(hmapNode);
 
   {
@@ -105,13 +105,14 @@ function createEarth(rootNode, resources){
     light.diffuse = [0.8, 0.72, 0.68, 1];
     light.specular = [1, 0.95, 0.80, 1];
     light.position = [0, 0, 0];
-
+    //light.direction = [0, 1 , 0];
+    //light.cutoff = 35;
     rotateLight = new TransformationSGNode(mat4.create());
-    let translateLight = new TransformationSGNode(glm.translate(0,-5,60)); //translating the light is the same as setting the light position
+    let translateLight = new TransformationSGNode(glm.translate(0,-20,0)); //translating the light is the same as setting the light position
 
     rotateLight.append(translateLight);
     translateLight.append(light);
-    //translateLight.append(makeSphere(1,10,10)); //add sphere for debugging: since we use 0,0,0 as our light position the sphere is at the same position as the light source
+    translateLight.append(new RenderSGNode(makeSphere(1,10,10))); //add sphere for debugging: since we use 0,0,0 as our light position the sphere is at the same position as the light source
     rootNode.append(rotateLight);
     hmapNode.append(rotateLight);
   }

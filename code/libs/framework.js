@@ -1041,3 +1041,57 @@ function create2DContext(width, height) {
   document.body.appendChild(canvas);
   return canvas.getContext('2d');
 }
+
+
+/**
+ * a light node represents a light including light position and light properties (ambient, diffuse, specular)
+ * the light position will be transformed according to the current model view matrix
+ */
+class SpotLightSGNode extends LightSGNode {
+
+  constructor(cutoff, children) {
+    super(children);
+
+    this.uniform = 'u_spot';
+    this.cutoff = cutoff || 0.0;
+    this.direction = [0,0,1];
+  }
+
+  setLightUniforms(context) {
+    const gl = context.gl;
+    //no materials in use
+    if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'Cutoff'))) {
+      return;
+    }
+    gl.uniform1f(gl.getUniformLocation(context.shader, this.uniform+'Cutoff'), this.cutoff);
+  }
+
+ setLightPosition(context) {
+    const gl = context.gl;
+    if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'Direction'))) {
+      return;
+    }
+    gl.uniform3f(gl.getUniformLocation(context.shader, this.uniform+'Direction'), this.direction[0], this.direction[1], this.direction[2]);
+  }
+/*
+  computeLightPosition(context) {
+    super.computeLightPosition(context);
+  }
+*/
+/**
+ * set the light uniforms without updating the last light position
+ */
+setSpotLight(context) {
+  this.setLightPosition(context);
+  this.setLightUniforms(context);
+}
+
+render(context) {
+  this.setSpotLight(context);
+
+  //since this a transformation node update the matrix according to my position
+  //this.matrix = glm.translate(this.position[0], this.position[1], this.position[2]);
+  //render children
+  super.render(context);
+}
+}

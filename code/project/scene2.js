@@ -3,6 +3,7 @@ var birdTransformations = [];
 var birdTextures = [];
 var oldAngle = 0;
 var rnd = 0;
+var timeEarth = 0;
 var birdAngle;
 
 function createBird(){
@@ -144,7 +145,8 @@ function createEarth(rootNode, resources){
   }
 }
 
-function updateBirdTransformation(timeInMilliseconds, delta){
+function updateBirdTransformation(delta){
+  timeEarth+= delta;
   rnd += delta;
   if(rnd > 6000){
     rnd = 0;
@@ -156,12 +158,11 @@ function updateBirdTransformation(timeInMilliseconds, delta){
     angle = birdAngle / 1000 * delta;
     birdTrans.matrix = mat4.multiply(mat4.create(), birdTrans.matrix, glm.rotateY(angle));
   }
-
-      birdTrans.matrix = mat4.multiply(mat4.create(), birdTrans.matrix, glm.translate(0,0,0.001*delta));
+  birdTrans.matrix = mat4.multiply(mat4.create(), birdTrans.matrix, glm.translate(0,0,0.001*delta));
 
   var wingA = birdTransformations[1];
   var wingB = birdTransformations[2];
-  angle = 15 * Math.sin(timeInMilliseconds/300.0);
+  angle = 15 * Math.sin(timeEarth/300.0);
   wingA.matrix = mat4.multiply(mat4.create(), glm.rotateZ(oldAngle - angle), wingA.matrix);
   wingB.matrix = mat4.multiply(mat4.create(), glm.rotateZ(angle - oldAngle), wingB.matrix);
   oldAngle = angle;

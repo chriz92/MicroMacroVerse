@@ -11,6 +11,7 @@ var electronColor = [1,1,0,1];
 var atomColors;
 var secondLayer = 11;
 var coreLayer =10;
+var timeAtom = 0;
     //var moons = new Float32Array([0, 0, 0, 1, 2, 67, 62, 27, 14]);
 
 function createAtoms(rootNode, resources){
@@ -94,8 +95,9 @@ function createNeutrogenAtom()
                         electron.size,electron.size,electron.size,electron.size,electron.size,electron.size,electron.size]);
 }
 
-function updateAtomTransformations(timeInMilliseconds){
-    var globalTimeMultiplier = timeInMilliseconds*0.005; //TODO: respect zoom level
+function updateAtomTransformations(delta){
+    timeAtom += delta;
+    var globalTimeMultiplier = timeAtom*0.005; //TODO: respect zoom level
     for(i = 0; i < atomTransformationNodes.length; i++){
     //for(i = 0; i < 2; i++){
       var transformation = mat4.create();
@@ -122,7 +124,7 @@ function updateAtomTransformations(timeInMilliseconds){
       position[12] = 1;
       position = mat4.multiply(mat4.create(), position, transformation);
       transformation = mat4.multiply(mat4.create(), transformation, glm.scale(scale, scale, scale));
-      transformation = mat4.multiply(mat4.create(), transformation, glm.rotateY(atomRotation[i]*timeInMilliseconds));
+      transformation = mat4.multiply(mat4.create(), transformation, glm.rotateY(atomRotation[i]*timeAtom));
       atomTransformationNodes[i].matrix = transformation;
   }
 }

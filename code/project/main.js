@@ -6,16 +6,23 @@
     var envcubetexture;
     var animatedAngle = 0;
     var globalTime = 0;
-    var worldTime = 0;
+    var animationTime = 0;
+
+    var scenePositions = [
+      [-60, 0, 70],
+      [0,0,70],
+      [60,0,70]
+    ]
 
     const camera = {
       rotation: {
         x: 0,
         y: 0
       },
-      position: [0,0,50],
+      position: [0,0,10],
       velocity: 0,
-      isAccelerating: false
+      isAccelerating: false,
+      animatedMode: true
     };
 
     //load the shader resources using a utility function
@@ -60,45 +67,71 @@
     });
 
 
-function updateFreeCamera(context, delta){
-  if(camera.isAccelerating == 0){
-    if (camera.velocity > 0){
-			camera.velocity -= 0.0009 * delta;
-			camera.velocity = Math.max(camera.velocity, 0);
-		}
-		else{
-			camera.velocity += 0.0009 * delta;
-			camera.velocity = Math.min(camera.velocity, 0);
-		}
-  } else{
-    camera.velocity += camera.isAccelerating * 0.0004 * delta;
-    camera.velocity = Math.max(Math.min(camera.velocity, 0.025), -0.025)
-    camera.isAccelerating = 0;
-  }
+function getActiveScene(){
+      active = [Number.MAX_VALUE,Number.MAX_VALUE,Number.MAX_VALUE];
+      position = camera.position;
+      active = -1;
+      for(i = 0; i < scenePositions.length; i++){
+        pos = scenePositions[i];
+        dist = Math.sqrt(Math.pow(position[0] - pos[0] , 2) + Math.pow(position[1] - pos[1] , 2) + Math.pow(position[2] - pos[2] , 2)) - 30;
+        if(dist < 0) active = i;
+      }
+      return active;
+    }
 
-  direction = [
-    Math.cos(camera.rotation.y) * Math.sin(camera.rotation.x),
-    Math.sin(camera.rotation.y),
-    Math.cos(camera.rotation.y) * Math.cos(camera.rotation.x)
-  ];
-  distance = camera.velocity * delta;
-  camera.position = camera.position.map((x,i) => x + (direction[i] * distance));
-  direction = camera.position.map((x,i) => x + direction[i]);
-  //camera.position.y += direction[1];
-  //camera.position.z += direction[2];
-  let lookAtMatrix = mat4.lookAt(mat4.create(),
+
+function updateCamera(context, delta){
+  if(camera.animatedMode){
+    if(animationTime < 7000){
+      camera.rotation.x += 0.1*delta;
+      //camera.rotation.y += 0.01*delta;
+    }
+
+
+    //distance = camera.velocity * delta;
+    //camera.position = camera.position.map((x,i) => x + (direction[i] * distance));
+  //  direction = camera.position.map((x,i) => x + direction[i]);
+    let lookAtMatrix = mat4.lookAt(mat4.create(),
+                          camera.position,
+                          scenePositions[0],
+                          [0,1,0]);
+    let mouseRotateMatrix = mat4.multiply(mat4.create(),
+                          glm.rotateX(camera.rotation.x),
+                          glm.rotateY(camera.rotation.y));
+    context.viewMatrix = mat4.multiply(mat4.create(), lookAtMatrix, mouseRotateMatrix);
+    context.invViewMatrix = mat4.invert(mat4.create(), context.viewMatrix);
+  }
+  else{
+    if(camera.isAccelerating == 0){
+      if (camera.velocity > 0){
+			   camera.velocity -= 0.0009 * delta;
+			   camera.velocity = Math.max(camera.velocity, 0);
+		  }
+		  else{
+			   camera.velocity += 0.0009 * delta;
+			   camera.velocity = Math.min(camera.velocity, 0);
+		  }
+    } else{
+      camera.velocity += camera.isAccelerating * 0.0004 * delta;
+      camera.velocity = Math.max(Math.min(camera.velocity, 0.025), -0.025)
+      camera.isAccelerating = 0;
+    }
+
+    direction = [
+      Math.cos(camera.rotation.y) * Math.sin(camera.rotation.x),
+      Math.sin(camera.rotation.y),
+      Math.cos(camera.rotation.y) * Math.cos(camera.rotation.x)
+    ];
+    distance = camera.velocity * delta;
+    camera.position = camera.position.map((x,i) => x + (direction[i] * distance));
+    direction = camera.position.map((x,i) => x + direction[i]);
+    let lookAtMatrix = mat4.lookAt(mat4.create(),
                           camera.position,
                           direction,
                           [0,1,0]);
-  context.viewMatrix = lookAtMatrix;
-  /*let mouseRotateMatrix = mat4.multiply(mat4.create(),
-                          glm.rotateX(camera.rotation.x),
-                          glm.rotateY(camera.rotation.y));*/
-
-  //context.projectionMatrix = mat4.perspective(mat4.create(), 30, gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
-  //context.viewMatrix = mat4.lookAt(mat4.create(), [-0,-40,1], [0,0,0], [0,1,0]);
-  //context.viewMatrix = mat4.multiply(mat4.create(), lookAtMatrix, mouseRotateMatrix);
-  context.invViewMatrix = mat4.invert(mat4.create(), context.viewMatrix);
+    context.viewMatrix = lookAtMatrix;
+    context.invViewMatrix = mat4.invert(mat4.create(), context.viewMatrix);
+  }
 }
 
 
@@ -115,12 +148,15 @@ function init(resources) {
   //compile and link shader program
   rootNode = new ShaderSGNode(createProgram(gl, resources.tex_vs, resources.tex_fs)); //TODO: global shaders (phong)
   //rootNode.append( new ShaderSGNode(createProgram(gl, resources.vs, resources.fs)));
-  solarsystemNode = new TransformationSGNode(glm.translate(-60, 0, 70));
-  earthNode = new TransformationSGNode(glm.translate(0,0,70));
-  atomNode = new TransformationSGNode(glm.translate(60,0,70));
+  solarsystemNode = new TransformationSGNode(glm.transform({translate: scenePositions[0]}));
+  earthNode = new TransformationSGNode(glm.transform({translate: scenePositions[1]}));
+  atomNode = new TransformationSGNode(glm.transform({translate: scenePositions[2]}));
   createSolarSystem(solarsystemNode, resources);
   createEarth(earthNode, resources);
   createAtoms(atomNode, resources);
+  updatePlanetTransformations(0);
+  updateBirdTransformation(0);
+  updateAtomTransformations(0);
   rootNode.append(solarsystemNode);
   rootNode.append(earthNode);
   rootNode.append(atomNode);
@@ -172,12 +208,19 @@ function render(timeInMilliseconds) {
   text.clearRect(0, 0, text.canvas.width, text.canvas.height);
   const context = createSGContext(gl);
   //sunTransformationNode.matrix = glm.rotateY(-timeInMilliseconds*0.05);
-  let min = minDistanceToPlanets(camera.position);
-  updateFreeCamera(context, delta);
-  worldTime += delta / Math.max(Math.min(21-min,20), 1); //TODO: change to multiplication to stop animation if outside of scene
-  updatePlanetTransformations(timeInMilliseconds);
-  updateBirdTransformation(timeInMilliseconds, delta);
-  updateAtomTransformations(timeInMilliseconds);
+  let active = getActiveScene();
+
+  if(active != -1){
+    animationTime += delta;
+    if(active == 0)
+      updatePlanetTransformations(delta);
+    else if(active == 1)
+      updateBirdTransformation(delta);
+    else if(active == 2)
+      updateAtomTransformations(delta);
+  }
+  updateCamera(context, delta);
+
   rootNode.render(context);
   //request another call as soon as possible
   fps = 1000 / delta;
@@ -313,7 +356,7 @@ function initInteraction(canvas){
   canvas.addEventListener('mousemove', function(event){
     const pos = toPos(event);
     const delta = {x:mouse.pos.x - pos.x, y:mouse.pos.y -pos.y};
-    if(mouse.leftButtonDown){
+    if(!camera.animatedMode && mouse.leftButtonDown){
       //var new_x = camera.rotation.x - 0.01 * delta.x
       //var new_y = camera.rotation.y - 0.01 * delta.x
       camera.rotation.x -= 0.01 * delta.x;
@@ -326,19 +369,28 @@ canvas.addEventListener('mouseup', function(event){
   mouse.leftButtonDown = false;
 });
   document.addEventListener('keypress', function(event) {
-    if(event.code == 'KeyR'){
-      camera.rotation.x = 45;
-      camera.rotation.y = 0;
+    if(event.code == 'KeyC'){
+      camera.rotation = {x: 0, y: 0};
+      camera.animatedMode = !camera.animatedMode;
+      if(camera.animatedMode){
+        camera.position = [-60, 0, 42];
+      }
+      else{
+        animationTime = 0;
+        camera.position = [0,0,10];
+      }
     }
   });
+
+
   document.addEventListener('keypress', function(event) {
-      if(event.code == 'KeyW'){
+      if(!camera.animatedMode && event.code == 'KeyW'){
         camera.isAccelerating = 1;
         //if(camera.velocity < 10) camera.velocity += 0.01;
       }
     });
   document.addEventListener('keypress', function(event) {
-      if(event.code == 'KeyS'){
+      if(!camera.animatedMode && event.code == 'KeyS'){
         camera.isAccelerating = -1;
         //if(camera.velocity > -10) camera.velocity -= 0.01;
       }

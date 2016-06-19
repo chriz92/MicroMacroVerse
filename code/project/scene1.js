@@ -9,6 +9,7 @@ var planetRotation = new Float32Array([
 ]);
 var planetSize = new Float32Array([3, 0.12, 0.20, 0.35, 0.36, 0.8, 0.72]);
 var planetTransformationNodes = [];
+var timeSolar = 0;
     //var moons = new Float32Array([0, 0, 0, 1, 2, 67, 62, 27, 14]);
 
 function createSolarSystem(rootNode, resources){
@@ -61,8 +62,9 @@ function createSolarSystem(rootNode, resources){
   }
 }
 
-function updatePlanetTransformations(timeInMilliseconds){
-    var globalTimeMultiplier = timeInMilliseconds*0.005; //TODO: respect zoom level
+function updatePlanetTransformations(delta){
+    timeSolar += delta;
+    var globalTimeMultiplier = timeSolar*0.005; //TODO: respect zoom level
     for(i = 0; i < planetTransformationNodes.length; i++){
     //for(i = 0; i < 2; i++){
       var transformation = mat4.create();
@@ -78,19 +80,7 @@ function updatePlanetTransformations(timeInMilliseconds){
       position[12] = 1;
       position = mat4.multiply(mat4.create(), position, transformation);
       transformation = mat4.multiply(mat4.create(), transformation, glm.scale(scale, scale, scale));
-      transformation = mat4.multiply(mat4.create(), transformation, glm.rotateY(planetRotation[i]*timeInMilliseconds));
+      transformation = mat4.multiply(mat4.create(), transformation, glm.rotateY(planetRotation[i]*timeSolar));
       planetTransformationNodes[i].matrix = transformation;
   }
-}
-
-
-function minDistanceToPlanets(position){
-  minDist = Number.MAX_VALUE;
-  for(i = 0; i < 1; i++){
-    m = planetTransformationNodes[i].matrix;
-    pos = [m[12], m[13], m[14]];
-    dist = Math.sqrt(Math.pow(position[0] - pos[0] , 2) + Math.pow(position[1] - pos[1] , 2) + Math.pow(position[2] - pos[2] , 2)) - planetSize[i];
-    minDist = Math.min(minDist, dist);
-  }
-  return minDist;
 }

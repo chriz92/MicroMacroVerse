@@ -47,7 +47,7 @@ vec4 calculateSimplePointLight(Light light, Material material, vec3 lightVec, ve
 
 	//compute specular term
 	vec3 reflectVec = reflect(-lightVec,normalVec);
-	float spec = pow( max( dot(reflectVec, eyeVec), 0.0) , material.shininess);
+	float spec = pow( max( dot(reflectVec, eyeVec), 0.0) , 1.0);//material.shininess);
   material.diffuse = textureColor;
   //material.ambient = textureColor;
   //material.diffuse *= textureColor;
@@ -66,6 +66,6 @@ void main (void) {
 
   textureColor = texture2D(u_tex, v_texCoord*u_ratio);
   //textureColor.w = depth;
-	gl_FragColor = (0.5*depth + 0.25)*textureColor;//calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor);
+	gl_FragColor =calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor);// vec4(v_normalVec*100.0, 1); //(1.5*depth + 0.25)*textureColor;// //
 
 }

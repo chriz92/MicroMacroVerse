@@ -13,7 +13,7 @@
         x: 0,
         y: 0
       },
-      position: [0,0,-20],
+      position: [0,0,50],
       velocity: 0,
       isAccelerating: false
     };
@@ -48,7 +48,9 @@
       day_pz: 'textures/day_ft.bmp',
       day_nz: 'textures/day_bk.bmp',
       hmap: 'textures/hmap.png',
-      grass:'textures/grass.jpg'
+      grass:'textures/grass.jpg',
+      bird: 'textures/bird.jpg',
+      birdfeather: 'textures/birdfeather.jpg'
     }).then(function (resources /*an object containing our keys with the loaded resources*/) {
       init(resources);
       //render one frame
@@ -169,7 +171,7 @@ function render(timeInMilliseconds) {
   updateFreeCamera(context, delta);
   worldTime += delta / Math.max(Math.min(21-min,20), 1); //TODO: change to multiplication to stop animation if outside of scene
   updatePlanetTransformations(worldTime);
-
+  updateBirdTransformation(timeInMilliseconds, delta);
   //let lookAtMatrix = mat4.lookAt(mat4.create(), [0,-40,4], [0,0,0], [0,1,0]);
 
   /*let lookAtMatrix = mat4.lookAt(mat4.create(),
@@ -269,6 +271,7 @@ class TextureHeightmapSGNode extends SGNode {
     //set additional shader parameters
     gl.uniform1i(gl.getUniformLocation(context.shader, 'u_tex'), 0);
     gl.uniform1i(gl.getUniformLocation(context.shader, 'u_heightmap'), 1);
+    gl.uniform2f(gl.getUniformLocation(context.shader, 'u_hmapSize'), this.heightmap.width, this.heightmap.height)
     var wratio = this.heightmap.width / this.texture.width;
     var hratio = this.heightmap.height /this.texture.height;
     gl.uniform2f(gl.getUniformLocation(context.shader, 'u_ratio'), this.ratio[0] , this.ratio[1]);

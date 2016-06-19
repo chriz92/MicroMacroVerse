@@ -1,17 +1,24 @@
-var atomDistance = new Float32Array([
-0, 5, 6, 9, 16, 26, 28
-]);
-var atomOrbitRotation = new Float32Array([
-0,10,15,-20,12,22,-25
-]);
-var atomRotation = new Float32Array([
-0,10,15,-20,12,22,-25
-]);
-var atomSize = new Float32Array([3, 0.12, 0.20, 0.35, 0.36, 0.8, 0.72]);
+var colorNode = null;
+var atomXDistance;
+var atomYDistance;
+var atomOrbitRotation;
+var atomRotation;
+var atomSize;
 var atomTransformationNodes = [];
+var neutronColor = [0,0,1,1];
+var protonColor = [1,0,0,1];
+var electronColor = [1,1,0,1];
+var atomColors;
+var secondLayer = 11;
+var coreLayer =10;
     //var moons = new Float32Array([0, 0, 0, 1, 2, 67, 62, 27, 14]);
 
 function createAtoms(rootNode, resources){
+  {
+    colorNode = new ShaderSGNode(createProgram(gl,resources.color_vs, resources.color_fs));
+    rootNode.append(colorNode);
+  }
+
   {
     let envNode = new ShaderSGNode(createProgram(gl, resources.env_vs, resources.env_fs));
     rootNode.append(envNode);
@@ -19,6 +26,7 @@ function createAtoms(rootNode, resources){
     let skybox = new EnvironmentSGNode(texture, 0, false, new RenderSGNode(makeSphere(30,20,20)));
     envNode.append(skybox);
   }
+
   {
     //initialize light
     let light = new LightSGNode(); //use now framework implementation of light node
@@ -35,28 +43,55 @@ function createAtoms(rootNode, resources){
     //translateLight.append(createSphere()); //add sphere for debugging: since we use 0,0,0 as our light position the sphere is at the same position as the light source
     rootNode.append(rotateLight);
   }
+    createNeutrogenAtom();
   {
+
     // Adding all atoms
     for(i = 0; i < atomSize.length; i++){
-      var atom = new MaterialSGNode(
-        new RenderSGNode(makeSphere(1, 30, 30))
-      );
+        var atom = new SetUniformSGNode("u_forceColor", atomColors[i] ,new MaterialSGNode(
+          new RenderSGNode(makeSphere(1, 30, 30)))
+        );
       var atomTransformationNode = new TransformationSGNode(mat4.create(), atom);
-      if(i == 0){
-        atom.ambient = [1.0, 1.0, 1.0, 1];
-        atom.specular = [0.9, 0.9, 0.9, 1];
-      }else{
-        atom.ambient = [0.2, 0.2, 0.2, 1];
-        atom.specular = [0.5, 0.5, 0.5, 1];
-      }
-      atom.diffuse = [0.2, 0.2, 0.2, 1];
 
+      atom.ambient = [1.0, 1.0, 1.0, 1];
+      atom.specular = [0.9, 0.9, 0.9, 1];
+      atom.diffuse = [0.2, 0.2, 0.2, 1];
       atom.shininess = 10.0;
 
-      rootNode.append(atomTransformationNode);
+      colorNode.append(atomTransformationNode);
       atomTransformationNodes.push(atomTransformationNode);
     }
   }
+}
+
+const proton = {
+
+  size: 2,
+  color:[1,0,0,1]
+};
+const neutron = {
+  size: 2,
+  color:[0,0,1,1]
+};
+const electron = {
+  size: 1,
+  color:[1,1,0,1]
+};
+
+function createNeutrogenAtom()
+{
+    atomColors =[proton.color,proton.color,proton.color,proton.color,proton.color,
+      neutron.color, neutron.color, neutron.color,neutron.color,neutron.color,
+      electron.color, electron.color, electron.color, electron.color, electron.color, electron.color, electron.color,electron.color,];
+
+   atomYDistance = new Float32Array([1,-1.5,2,0,1.5, -1,2,1,0,0, 0,0,0,0,0,0,0]);
+   atomXDistance = new Float32Array([0,0.5,1,1.5,2, 2,1,0,-1,-2, 15,15, 20,20,20,20,20]);
+   atomOrbitRotation = new Float32Array([0,1,0,0,0, 0,0,0,0,0, 22,25, 21,20,18,17,16]);
+   atomRotation = new Float32Array([0,0,0,0,0,0,0,0,0,0, 20,20, 20,20,20,20,20]);
+   atomSize =
+      new Float32Array([proton.size,proton.size,proton.size,proton.size,proton.size,
+                        neutron.size,neutron.size,neutron.size,neutron.size,neutron.size,
+                        electron.size,electron.size,electron.size,electron.size,electron.size,electron.size,electron.size]);
 }
 
 function updateAtomTransformations(timeInMilliseconds){
@@ -67,8 +102,19 @@ function updateAtomTransformations(timeInMilliseconds){
       var scale = atomSize[i];
       var speedMultiplier = (atomTransformationNodes.length - i);
       transformation = mat4.multiply(mat4.create(), transformation, glm.rotateZ(atomOrbitRotation[i]));
-      transformation = mat4.multiply(mat4.create(), transformation, glm.rotateY(-(speedMultiplier*speedMultiplier*globalTimeMultiplier)));
-      transformation = mat4.multiply(mat4.create(), transformation, glm.translate(atomDistance[i], 0, 0));
+      if(scale == 1){
+        if(i >secondLayer)
+        {
+          speedMultiplier = 3+i/4;
+          transformation = mat4.multiply(mat4.create(), transformation, glm.rotateY(-(speedMultiplier*speedMultiplier*globalTimeMultiplier)));
+        }
+        else
+        {
+          speedMultiplier = 3+i/4;
+          transformation = mat4.multiply(mat4.create(), transformation, glm.rotateZ(-(speedMultiplier*speedMultiplier*globalTimeMultiplier)));
+        }
+      }
+      transformation = mat4.multiply(mat4.create(), transformation, glm.translate(atomXDistance[i], atomYDistance[i], 0));
       position = mat4.create();
       position[0] = 1;
       position[4] = 1;

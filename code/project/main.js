@@ -28,6 +28,8 @@
       env_fs: 'shader/envmap.fs.glsl',
       hmap_vs: 'shader/hmap.vs.glsl',
       hmap_fs: 'shader/hmap.fs.glsl',
+      color_vs: 'shader/color.vs.glsl',
+      color_fs: 'shader/color.fs.glsl',
       sunTex: "textures/sun.jpg",
       planet1Tex: "textures/planet1.jpg",
       planet2Tex: "textures/planet2.jpg",
@@ -113,10 +115,13 @@ function init(resources) {
   //rootNode.append( new ShaderSGNode(createProgram(gl, resources.vs, resources.fs)));
   solarsystemNode = new TransformationSGNode(glm.translate(-60, 0, 70));
   earthNode = new TransformationSGNode(glm.translate(0,0,70));
+  atomNode = new TransformationSGNode(glm.translate(60,0,70));
   createSolarSystem(solarsystemNode, resources);
   createEarth(earthNode, resources);
+  createAtoms(atomNode, resources);
   rootNode.append(solarsystemNode);
   rootNode.append(earthNode);
+  rootNode.append(atomNode);
   initInteraction(gl.canvas);
 }
 
@@ -169,7 +174,7 @@ function render(timeInMilliseconds) {
   updateFreeCamera(context, delta);
   worldTime += delta / Math.max(Math.min(21-min,20), 1); //TODO: change to multiplication to stop animation if outside of scene
   updatePlanetTransformations(worldTime);
-
+  updateAtomTransformations(worldTime);
   //let lookAtMatrix = mat4.lookAt(mat4.create(), [0,-40,4], [0,0,0], [0,1,0]);
 
   /*let lookAtMatrix = mat4.lookAt(mat4.create(),

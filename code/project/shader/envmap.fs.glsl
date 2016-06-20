@@ -1,3 +1,7 @@
+/**
+ * environment map fragment shader
+ */
+
 //need to specify how "precise" float should be
 precision mediump float;
 

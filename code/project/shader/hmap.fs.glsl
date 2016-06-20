@@ -1,5 +1,5 @@
 /**
- * a phong shader implementation with texture support
+ * heightmap fragment shader
  */
 precision mediump float;
 
@@ -61,11 +61,8 @@ vec4 calculateSimplePointLight(Light light, Material material, vec3 lightVec, ve
 }
 
 void main (void) {
-  vec4 depth = texture2D(u_heightmap, v_texCoord);
   vec4 textureColor = vec4(0,0,0,1);
-
-  textureColor = texture2D(u_tex, v_texCoord*u_ratio);
-  //textureColor.w = depth;
-	gl_FragColor =calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor);// vec4(v_normalVec*100.0, 1); //(1.5*depth + 0.25)*textureColor;// //
+  textureColor = texture2D(u_tex, v_texCoord * u_ratio);
+	gl_FragColor = calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor);
 
 }

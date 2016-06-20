@@ -1029,23 +1029,7 @@ var sg = {
 // TEAM CREATED FRAMEWORK EXTENSIONS
 
 /**
- * creates a WebGLRenderingContext along with a canvas to render to
- * @param width
- * @param height
- * @returns {WebGLRenderingContext}
- */
-function create2DContext(width, height) {
-  var canvas = document.createElement('canvas');
-  canvas.width = width || 400;
-  canvas.height = height || 400;
-  document.body.appendChild(canvas);
-  return canvas.getContext('2d');
-}
-
-
-/**
- * a light node represents a light including light position and light properties (ambient, diffuse, specular)
- * the light position will be transformed according to the current model view matrix
+ * a spotlight node
  */
 class SpotLightSGNode extends LightSGNode {
 
@@ -1073,25 +1057,119 @@ class SpotLightSGNode extends LightSGNode {
     }
     gl.uniform3f(gl.getUniformLocation(context.shader, this.uniform+'Direction'), this.direction[0], this.direction[1], this.direction[2]);
   }
-/*
-  computeLightPosition(context) {
-    super.computeLightPosition(context);
+ /**
+  * set the light uniforms without updating the last light position
+  */
+ setSpotLight(context) {
+    this.setLightPosition(context);
+    this.setLightUniforms(context);
   }
-*/
-/**
- * set the light uniforms without updating the last light position
- */
-setSpotLight(context) {
-  this.setLightPosition(context);
-  this.setLightUniforms(context);
+
+  render(context) {
+    this.setSpotLight(context);
+    super.render(context);
+  }
 }
 
-render(context) {
-  this.setSpotLight(context);
+class EnvironmentSGNode extends SGNode {
+  constructor(envtexture, textureunit, doReflect , children ) {
+      super(children);
+      this.envtexture = envtexture;
+      this.textureunit = textureunit;
+      this.doReflect = doReflect;
+  }
 
-  //since this a transformation node update the matrix according to my position
-  //this.matrix = glm.translate(this.position[0], this.position[1], this.position[2]);
-  //render children
-  super.render(context);
+  render(context)
+  {
+    //set additional shader parameters
+    let invView3x3 = mat3.fromMat4(mat3.create(), context.invViewMatrix); //reduce to 3x3 matrix since we only process direction vectors (ignore translation)
+    gl.uniformMatrix3fv(gl.getUniformLocation(context.shader, 'u_invView'), false, invView3x3);
+    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_texCube'), this.textureunit);
+    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_useReflection'), this.doReflect)
+
+    //activate and bind texture
+    gl.activeTexture(gl.TEXTURE0 + this.textureunit);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.envtexture);
+
+    //active face culling to look inside the cubemap from outside
+    gl.enable(gl.CULL_FACE);
+
+    //render children
+    super.render(context);
+
+    //clean up
+    gl.disable(gl.CULL_FACE);
+    gl.activeTexture(gl.TEXTURE0 + this.textureunit);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+  }
 }
+
+class HeightmapSGNode extends SGNode {
+  constructor(texture, heightmap, ratio, children ) {
+      super(children);
+      this.texture = texture;
+      this.heightmap = heightmap;
+      this.textureId = -1;
+      this.heightmapId= -1;
+      //user definied ratio between texture and heightmap (how many times should texture be on the heightmap)
+      this.ratio = ratio;
+  }
+
+  init(gl)
+  {
+    //initialize textures
+    this.textureId = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.textureId);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.magFilter || gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.minFilter || gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this.wrapS || gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this.wrapT || gl.REPEAT);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.texture);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    this.heightmapId = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.heightmapId);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.magFilter || gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.minFilter || gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this.wrapS || gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this.wrapT || gl.REPEAT);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.heightmap);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+  }
+
+  render(context)
+  {
+    if(this.textureId == -1){
+      this.init(context.gl);
+    }
+    //tell shader to use our texture
+    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableObjectTexture'), 1);
+    //set additional shader parameters
+    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_tex'), 0);
+    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_heightmap'), 1);
+    gl.uniform2f(gl.getUniformLocation(context.shader, 'u_hmapSize'), this.heightmap.width, this.heightmap.height)
+    var wratio = this.heightmap.width / this.texture.width;
+    var hratio = this.heightmap.height /this.texture.height;
+    gl.uniform2f(gl.getUniformLocation(context.shader, 'u_ratio'), this.ratio[0] , this.ratio[1]);
+
+    //activate/select texture unit and bind textures
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.textureId);
+
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.heightmapId);
+
+    //render children
+    super.render(context);
+
+    //clean up
+    gl.activeTexture(gl.TEXTURE1); //set active texture unit since it might have changed in children render functions
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    gl.activeTexture(gl.TEXTURE0); //set active texture unit since it might have changed in children render functions
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    //disable texturing in shader
+    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableObjectTexture'), 0);
+  }
 }

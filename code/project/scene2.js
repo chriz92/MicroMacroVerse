@@ -46,14 +46,17 @@ function createBird(){
   return birdTransformation;
 }
 
+/// creates new plane with width x height vertices
 function makePlane(width, height){
     var vertexPositionData = [];
     var normalData = [];
     var textureCoordData = [];
     for (var i = 0; i <= height; i++) {
       for (var j = 0; j <= width; j++) {
+        //vertex positions rangeing from -1 to 1
         var x = 2*(i / height) - 1;
         var y = 2*(j / width) - 1;
+        //texture coordinates rangeing from 0 to 1
         var u = i/height;
         var v = j/width;
 
@@ -84,15 +87,17 @@ function makePlane(width, height){
       position: vertexPositionData,
       normal: normalData,
       texture: textureCoordData,
-      index: indexData //1
+      index: indexData
     };
     }
 
 function createEarth(rootNode, resources){
-  var hmapNode = new ShaderSGNode(createProgram(gl, resources.hmap_vs, resources.tex_fs));
+  //initialize heightmap shader
+  var hmapNode = new ShaderSGNode(createProgram(gl, resources.hmap_vs, resources.hmap_fs));
   rootNode.append(hmapNode);
 
   {
+    //initialize skybox
     let envNode = new ShaderSGNode(createProgram(gl, resources.env_vs, resources.env_fs));
     rootNode.append(envNode);
     let texture = createCubeMap(resources.day_px, resources.day_nx, resources.day_py, resources.day_ny, resources.day_pz, resources.day_nz);
@@ -109,18 +114,18 @@ function createEarth(rootNode, resources){
     //light.direction = [0, 1 , 0];
     //light.cutoff = 35;
     rotateLight = new TransformationSGNode(mat4.create());
-    let translateLight = new TransformationSGNode(glm.translate(0,-20,0)); //translating the light is the same as setting the light position
+    let translateLight = new TransformationSGNode(glm.translate(-34,-35,0)); //translating the light is the same as setting the light position
 
     rotateLight.append(translateLight);
     translateLight.append(light);
-    translateLight.append(new RenderSGNode(makeSphere(1,10,10))); //add sphere for debugging: since we use 0,0,0 as our light position the sphere is at the same position as the light source
     rootNode.append(rotateLight);
     hmapNode.append(rotateLight);
   }
 
   {
+    //initialize earth surface with heightmap
     var earth = new MaterialSGNode(
-       new TextureHeightmapSGNode(resources.grass,resources.hmap,[128,128],
+       new HeightmapSGNode(resources.grass,resources.hmap,[10,10],
          new RenderSGNode(makePlane(40,40))
        )
      );
@@ -132,8 +137,9 @@ function createEarth(rootNode, resources){
     hmapNode.append(earthTransform);
   }
 
+  //add bird texture to an array
   birdTextures.push(resources.birdfeather)
-  birdTextures.push(resources.bird)
+  birdTextures.push(resources.birdskin)
 
   {
     for(i = 0; i < 3; i++){

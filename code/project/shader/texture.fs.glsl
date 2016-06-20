@@ -1,5 +1,5 @@
 /**
- * a phong shader implementation with texture support
+ * a phong shader implementation with texture and spotlight support
  */
 precision mediump float;
 
@@ -30,15 +30,12 @@ varying vec3 v_normalVec;
 varying vec3 v_eyeVec;
 varying vec3 v_lightVec;
 varying vec3 v_spotVec;
+uniform float u_spotCutoff;
 
 //texture related variables
 uniform bool u_enableObjectTexture;
-//TASK 1: define texture sampler and texture coordinates
 varying vec2 v_texCoord;
 uniform sampler2D u_tex;
-//EXTRA TASK: define uniform for time variable
-uniform float u_wobbleTime;
-uniform float u_spotCutoff;
 
 vec4 calculateSimplePointLight(Light light, Material material, vec3 lightVec, vec3 normalVec, vec3 eyeVec, vec3 spotVec, vec4 textureColor) {
 	lightVec = normalize(lightVec);
@@ -72,15 +69,8 @@ vec4 calculateSimplePointLight(Light light, Material material, vec3 lightVec, ve
 }
 
 void main (void) {
-
   vec4 textureColor = vec4(0,0,0,1);
-  //EXTRA TASK: animate texture coordinates
-  vec2 wobblecoords = v_texCoord;
-  wobblecoords.s = wobblecoords.s + sin(wobblecoords.t*3.14+u_wobbleTime/100.0)*0.1;
-	textureColor = texture2D(u_tex,wobblecoords);
-  //TASK 2: integrate texture color into phong shader
-  //textureColor = texture2D(u_tex,v_texCoord);
+	textureColor = texture2D(u_tex,v_texCoord);
 
 	gl_FragColor = calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, v_spotVec, textureColor);
-
 }

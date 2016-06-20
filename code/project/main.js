@@ -5,7 +5,7 @@
     var resources;
     var envcubetexture;
     var animatedAngle = 0;
-    var globalTime = 0;
+    var lastRenderTime = 0;
     var animationTime = 0;
 
     var scene = 0;
@@ -19,7 +19,6 @@
       [10,-10,60],
       [85,0,70],
     ]
-
     const camera = {
       rotation: {
         x: 0,
@@ -64,7 +63,7 @@
       day_nz: 'textures/day_bk.bmp',
       hmap: 'textures/hmap.png',
       grass:'textures/grass.jpg',
-      bird: 'textures/bird.jpg',
+      birdskin: 'textures/bird.jpg',
       birdfeather: 'textures/birdfeather.jpg',
       noise: 'textures/noise.jpg'
     }).then(function (resources /*an object containing our keys with the loaded resources*/) {
@@ -73,7 +72,7 @@
       render(0);
     });
 
-
+// returns current active scene based on camera position
 function getActiveScene(){
       active = [Number.MAX_VALUE,Number.MAX_VALUE,Number.MAX_VALUE];
       position = camera.position;
@@ -81,6 +80,7 @@ function getActiveScene(){
       for(i = 0; i < scenePositions.length; i++){
         pos = scenePositions[i];
         dist = Math.sqrt(Math.pow(position[0] - pos[0] , 2) + Math.pow(position[1] - pos[1] , 2) + Math.pow(position[2] - pos[2] , 2)) - 30;
+        //if camera is inside scene (scenes skybox) set the scene as active
         if(dist < 0) active = i;
       }
       return active;
@@ -88,13 +88,11 @@ function getActiveScene(){
 
 
 function updateCamera(context, delta){
-
   if(camera.animatedMode){
     if(animationTime < 12000){
       camera.rotation.x -= 0.0001*delta;
       if(animationTime < 6000){
         camera.rotation.y += 0.001*delta;
-
       }
 
       if(animationTime >= 6000){
@@ -105,6 +103,8 @@ function updateCamera(context, delta){
         animationTime = 0;
         if(scene < 2){
             scene += 1;
+            camera.rotation.y = 1.05;
+            camera.rotation.x = 0;
         }
         else{
             scene = 0;
@@ -116,9 +116,6 @@ function updateCamera(context, delta){
         }
       }
     }
-    //distance = camera.velocity * delta;
-    //camera.position = camera.position.map((x,i) => x + (direction[i] * distance));
-    //direction = camera.position.map((x,i) => x + direction[i]);
     let lookAtMatrix = mat4.lookAt(mat4.create(),
                           camera.position,
                           scenePositions[0],
@@ -145,13 +142,17 @@ function updateCamera(context, delta){
       camera.isAccelerating = 0;
     }
 
+    //get the normalized direction in which the camera is looking based on the cameras rotation
     direction = [
       Math.cos(camera.rotation.y) * Math.sin(camera.rotation.x),
       Math.sin(camera.rotation.y),
       Math.cos(camera.rotation.y) * Math.cos(camera.rotation.x)
     ];
+    //the distance that the camera traveled since the last rendered frame
     distance = camera.velocity * delta;
+    //update camera postion by adding the multiplication of direction and distance to it
     camera.position = camera.position.map((x,i) => x + (direction[i] * distance));
+    //direction the camera is looking at based on the world coordinates
     direction = camera.position.map((x,i) => x + direction[i]);
     let lookAtMatrix = mat4.lookAt(mat4.create(),
                           camera.position,
@@ -169,26 +170,29 @@ function updateCamera(context, delta){
 function init(resources) {
   //create a GL context
   gl = createContext();
-  //create a 2D context
-  text = create2DContext();
-
   gl.enable(gl.DEPTH_TEST);
-  //compile and link shader program
-  rootNode = new ShaderSGNode(createProgram(gl, resources.tex_vs, resources.tex_fs)); //TODO: global shaders (phong)
-  //rootNode.append( new ShaderSGNode(createProgram(gl, resources.vs, resources.fs)));
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  //initialize phong shader and use it as root node
+  rootNode = new ShaderSGNode(createProgram(gl, resources.tex_vs, resources.tex_fs));
+  //initialize scenegraphs of individual scenes
   solarsystemNode = new TransformationSGNode(glm.transform({translate: scenePositions[0]}));
   earthNode = new TransformationSGNode(glm.transform({translate: scenePositions[1]}));
   atomNode = new TransformationSGNode(glm.transform({translate: scenePositions[2]}));
+  //initialize scenes
   createSolarSystem(solarsystemNode, resources);
   createEarth(earthNode, resources);
   createAtoms(atomNode, resources);
+  //initial update for transformation nodes
   updatePlanetTransformations(0);
   updateBirdTransformation(0);
   updateAtomTransformations(0);
+  //add scenegraphs to phong shader
   rootNode.append(solarsystemNode);
   rootNode.append(earthNode);
   rootNode.append(atomNode);
   initInteraction(gl.canvas);
+  //inital camera position
   camera.position = [-60, 0, 42];
 }
 
@@ -226,17 +230,16 @@ function createCubeMap(pos_x, neg_x, pos_y, neg_y, pos_z, neg_z) {
  */
 function render(timeInMilliseconds) {
   checkForWindowResize(gl);
-  var delta = timeInMilliseconds - globalTime;
-  globalTime = timeInMilliseconds;
+  //animate based on elapsed time
+  var delta = timeInMilliseconds - lastRenderTime;
+  lastRenderTime = timeInMilliseconds;
 
   gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
   gl.clearColor(0.1, 0.1, 0.1, 1.0);
   //clear the buffer
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  text.clearRect(0, 0, text.canvas.width, text.canvas.height);
   const context = createSGContext(gl);
-  //sunTransformationNode.matrix = glm.rotateY(-timeInMilliseconds*0.05);
   let active = getActiveScene();
 
   if(active != -1){
@@ -252,119 +255,8 @@ function render(timeInMilliseconds) {
 
   rootNode.render(context);
   //request another call as soon as possible
-  fps = 1000 / delta;
-  text.fillText(Math.round(fps).toString(), 50, 50);
   requestAnimationFrame(render);
-  //animate based on elapsed time
 }
-
-
-class EnvironmentSGNode extends SGNode {
-
-  constructor(envtexture, textureunit, doReflect , children ) {
-      super(children);
-      this.envtexture = envtexture;
-      this.textureunit = textureunit;
-      this.doReflect = doReflect;
-  }
-
-  render(context)
-  {
-    //set additional shader parameters
-    let invView3x3 = mat3.fromMat4(mat3.create(), context.invViewMatrix); //reduce to 3x3 matrix since we only process direction vectors (ignore translation)
-    gl.uniformMatrix3fv(gl.getUniformLocation(context.shader, 'u_invView'), false, invView3x3);
-    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_texCube'), this.textureunit);
-    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_useReflection'), this.doReflect)
-
-    //activate and bind texture
-    gl.activeTexture(gl.TEXTURE0 + this.textureunit);
-    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.envtexture);
-
-    gl.enable(gl.CULL_FACE);
-    gl.cullFace(gl.BACK); //TODO: delete
-
-    //render children
-    super.render(context);
-
-    gl.cullFace(gl.BACK); //delete
-    gl.disable(gl.CULL_FACE);
-    //clean up
-    gl.activeTexture(gl.TEXTURE0 + this.textureunit);
-    gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
-  }
-}
-
-class TextureHeightmapSGNode extends SGNode {
-  constructor(texture, heightmap,ratio, children ) {
-      super(children);
-      this.texture = texture;
-      this.heightmap = heightmap;
-      this.textureId = -1;
-      this.heightmapId= -1;
-      this.ratio = ratio;
-  }
-
-  init(gl)
-  {
-    this.textureId = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this.textureId);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.magFilter || gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.minFilter || gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this.wrapS || gl.REPEAT);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this.wrapT || gl.REPEAT);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.texture);
-    gl.bindTexture(gl.TEXTURE_2D, null);
-
-    this.heightmapId = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this.heightmapId);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.magFilter || gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.minFilter || gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this.wrapS || gl.REPEAT);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this.wrapT || gl.REPEAT);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.heightmap);
-    gl.bindTexture(gl.TEXTURE_2D, null);
-  }
-
-  render(context)
-  {
-    if(this.textureId == -1){
-      this.init(context.gl);
-    }
-    //tell shader to use our texture
-    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableObjectTexture'), 1);
-    //set additional shader parameters
-    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_tex'), 0);
-    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_heightmap'), 1);
-    gl.uniform2f(gl.getUniformLocation(context.shader, 'u_hmapSize'), this.heightmap.width, this.heightmap.height)
-    var wratio = this.heightmap.width / this.texture.width;
-    var hratio = this.heightmap.height /this.texture.height;
-    gl.uniform2f(gl.getUniformLocation(context.shader, 'u_ratio'), this.ratio[0] , this.ratio[1]);
-
-    //Texture0 buffer
-    //Texture1
-
-    //activate/select texture unit and bind texture
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.textureId);
-
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, this.heightmapId);
-
-    //render children
-    super.render(context);
-
-    //clean up
-    gl.activeTexture(gl.TEXTURE1); //set active texture unit since it might have changed in children render functions
-    gl.bindTexture(gl.TEXTURE_2D, null);
-
-    gl.activeTexture(gl.TEXTURE0); //set active texture unit since it might have changed in children render functions
-    gl.bindTexture(gl.TEXTURE_2D, null);
-
-    //disable texturing in shader
-    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_enableObjectTexture'), 0);
-  }
-}
-
 
 function initInteraction(canvas){
   const mouse = {
@@ -374,8 +266,8 @@ function initInteraction(canvas){
   function toPos(event){
     const rect = canvas.getBoundingClientRect();
     return{
-      x: event.clientX- rect.left,
-      y: event.clientY -rect.top
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top
     };
   }
   canvas.addEventListener('mousedown', function(event){
@@ -386,8 +278,6 @@ function initInteraction(canvas){
     const pos = toPos(event);
     const delta = {x:mouse.pos.x - pos.x, y:mouse.pos.y -pos.y};
     if(!camera.animatedMode && mouse.leftButtonDown){
-      //var new_x = camera.rotation.x - 0.01 * delta.x
-      //var new_y = camera.rotation.y - 0.01 * delta.x
       camera.rotation.x -= 0.01 * delta.x;
       camera.rotation.y += 0.01 * delta.y;
     }
@@ -403,11 +293,11 @@ canvas.addEventListener('mouseup', function(event){
       camera.animatedMode = !camera.animatedMode;
 
       if(camera.animatedMode){
-        animationTime = 0;
+        //when switching to animatedMode, set camera position to animation start point
         camera.position = [-60, 0, 42];
-        //camera.position = scenePositions[3];
       }
       else{
+        //when switching to manual mode, set animation time to 0 and camera position in front of the three scenes
         animationTime = 0;
         camera.position = [0,0,10];
       }
@@ -419,6 +309,7 @@ canvas.addEventListener('mouseup', function(event){
       if(!camera.animatedMode && event.code == 'KeyW'){
         camera.isAccelerating = 1;
         //if(camera.velocity < 10) camera.velocity += 0.01;
+        //TODO
       }
     });
   document.addEventListener('keypress', function(event) {

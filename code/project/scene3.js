@@ -46,7 +46,6 @@ function createAtoms(rootNode, resources){
   }
     createNeutrogenAtom();
   {
-
     // Adding all atoms
     for(i = 0; i < atomSize.length; i++){
         var atom = new SetUniformSGNode("u_forceColor", atomColors[i]);
@@ -77,6 +76,14 @@ function createAtoms(rootNode, resources){
       }
       atomTransformationNodes.push(atomTransformationNode);
     }
+
+    //add nucleus
+    let nucleus = new MaterialSGNode(new AdvancedTextureSGNode(resources.nucleus, new RenderSGNode(makeSphere(5, 30, 30))));
+    nucleus.ambient = [1.0, 1.0, 1.0, 1];
+    nucleus.specular = [0.9, 0.9, 0.9, 1];
+    nucleus.diffuse = [0.2, 0.2, 0.2, 1];
+    nucleus.shininess = 10.0;
+    rootNode.append(nucleus);
   }
 }
 
@@ -92,17 +99,12 @@ const electron = {
   size: 1,
   color:[1,1,0,1]
 };
-const core = {
-  size: 5,
-  color:[1,1,1,0.3]
-};
-
 function createNeutrogenAtom()
 {
     atomColors =[proton.color,proton.color,proton.color,proton.color,proton.color,
                  neutron.color, neutron.color, neutron.color,neutron.color,neutron.color,
-                 electron.color, electron.color, electron.color, electron.color, electron.color, electron.color, electron.color,
-                 core.color];
+                 electron.color, electron.color, electron.color, electron.color, electron.color, electron.color, electron.color
+                ];
 
    atomYDistance = new Float32Array([1,-1.5,2,0,1.5, -1,2,1,0,0, 0,0,0,0,0,0,0,0]);
    atomXDistance = new Float32Array([0,0.5,1,1.5,2, 2,1,0,-1,-2, 15,15, 20,20,20,20,20,0]);
@@ -111,8 +113,8 @@ function createNeutrogenAtom()
    atomSize =
       new Float32Array([proton.size,proton.size,proton.size,proton.size,proton.size,
                         neutron.size,neutron.size,neutron.size,neutron.size,neutron.size,
-                        electron.size,electron.size,electron.size,electron.size,electron.size,electron.size,electron.size,
-                        core.size]);
+                        electron.size,electron.size,electron.size,electron.size,electron.size,electron.size,electron.size
+                       ]);
 }
 
 function updateAtomTransformations(delta){

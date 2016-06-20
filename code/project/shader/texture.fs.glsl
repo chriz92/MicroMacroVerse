@@ -45,9 +45,6 @@ vec4 calculateSimplePointLight(Light light, Material material, vec3 lightVec, ve
 
   float spec = 0.0;
   float angle = dot(-lightVec, spotVec);
-  //return vec4(spotVec, 1);
-  //return vec4(angle,0, 0,1);
-
   if((u_spotCutoff == 0.0) || dot(-lightVec, spotVec) > cos(radians(u_spotCutoff))){
     //compute diffuse term
 	  float diffuse = max(dot(normalVec,lightVec),0.0);
@@ -56,8 +53,6 @@ vec4 calculateSimplePointLight(Light light, Material material, vec3 lightVec, ve
 	  vec3 reflectVec = reflect(-lightVec,normalVec);
 	  spec = pow( max( dot(reflectVec, eyeVec), 0.0) , material.shininess);
     material.diffuse = textureColor;
-    //material.ambient = textureColor;
-    //material.diffuse *= textureColor;
     material.ambient *= textureColor;
     vec4 c_amb  = clamp(light.ambient * material.ambient, 0.0, 1.0);
     vec4 c_diff = clamp(diffuse * light.diffuse * material.diffuse, 0.0, 1.0);
@@ -71,6 +66,7 @@ vec4 calculateSimplePointLight(Light light, Material material, vec3 lightVec, ve
 void main (void) {
   vec4 textureColor = vec4(0,0,0,1);
 	textureColor = texture2D(u_tex,v_texCoord);
-
-	gl_FragColor = calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, v_spotVec, textureColor);
+  vec4 color = calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, v_spotVec, textureColor);
+  color.a = textureColor.a;
+	gl_FragColor = color;
 }

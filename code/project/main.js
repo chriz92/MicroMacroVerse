@@ -65,7 +65,8 @@
       grass:'textures/grass.jpg',
       birdskin: 'textures/bird.jpg',
       birdfeather: 'textures/birdfeather.jpg',
-      noise: 'textures/noise.jpg'
+      noise: 'textures/noise.jpg',
+      nucleus: 'textures/nucleus.png'
     }).then(function (resources /*an object containing our keys with the loaded resources*/) {
       init(resources);
       //render one frame

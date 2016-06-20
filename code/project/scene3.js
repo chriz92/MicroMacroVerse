@@ -23,7 +23,7 @@ function createAtoms(rootNode, resources){
   {
     let envNode = new ShaderSGNode(createProgram(gl, resources.env_vs, resources.env_fs));
     rootNode.append(envNode);
-    let texture = createCubeMap(resources.uni_px, resources.uni_nx, resources.uni_py, resources.uni_ny, resources.uni_pz, resources.uni_nz);
+    let texture = createCubeMap(resources.noise, resources.noise, resources.noise, resources.noise, resources.noise, resources.noise);
     let skybox = new EnvironmentSGNode(texture, 0, false, new RenderSGNode(makeSphere(30,20,20)));
     envNode.append(skybox);
   }

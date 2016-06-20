@@ -7,11 +7,17 @@
     var animatedAngle = 0;
     var globalTime = 0;
     var animationTime = 0;
-
+    var reverseTime = 0;
+    var scene = 0;
     var scenePositions = [
-      [-60, 0, 70],
-      [0,0,70],
-      [60,0,70]
+      [-60, 0, 60],
+      [0,0,60],
+      [60,0,60]
+    ]
+    var sceneViewPoint =[
+      [-60, 0, 42],
+      [0,-10,60],
+      [60,-10,50]
     ]
 
     const camera = {
@@ -59,7 +65,8 @@
       hmap: 'textures/hmap.png',
       grass:'textures/grass.jpg',
       bird: 'textures/bird.jpg',
-      birdfeather: 'textures/birdfeather.jpg'
+      birdfeather: 'textures/birdfeather.jpg',
+      noise: 'textures/noise.png'
     }).then(function (resources /*an object containing our keys with the loaded resources*/) {
       init(resources);
       //render one frame
@@ -81,16 +88,36 @@ function getActiveScene(){
 
 
 function updateCamera(context, delta){
+
   if(camera.animatedMode){
-    if(animationTime < 7000){
-      camera.rotation.x += 0.1*delta;
-      //camera.rotation.y += 0.01*delta;
+    if(animationTime < 12000){
+      camera.rotation.x -= 0.0001*delta;
+      if(animationTime < 6000){
+        camera.rotation.y += 0.001*delta;
+
+      }
+
+      if(animationTime >= 6000){
+        camera.rotation.y -= 0.002*delta;
+
+      }
+      if(animationTime > 10000){
+        animationTime = 0;
+        if(scene < 2){
+            scene += 1;
+        }
+        else{
+            scene = 0;
+        }
+        camera.position = sceneViewPoint[scene];
+        if(scene == 3){
+          camera.rotation.y -=20;
+        }
+      }
     }
-
-
     //distance = camera.velocity * delta;
     //camera.position = camera.position.map((x,i) => x + (direction[i] * distance));
-  //  direction = camera.position.map((x,i) => x + direction[i]);
+    //direction = camera.position.map((x,i) => x + direction[i]);
     let lookAtMatrix = mat4.lookAt(mat4.create(),
                           camera.position,
                           scenePositions[0],
@@ -372,8 +399,11 @@ canvas.addEventListener('mouseup', function(event){
     if(event.code == 'KeyC'){
       camera.rotation = {x: 0, y: 0};
       camera.animatedMode = !camera.animatedMode;
+
       if(camera.animatedMode){
+        animationTime = 0;
         camera.position = [-60, 0, 42];
+        //camera.position = scenePositions[3];
       }
       else{
         animationTime = 0;

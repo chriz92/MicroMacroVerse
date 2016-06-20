@@ -45,7 +45,7 @@ void main() {
 	float bottom = getHeight(a_texCoord - y);
 	float left = getHeight(a_texCoord - x);
 	float right = getHeight(a_texCoord + x);
-	vec3 normal = normalize(vec3(0.5 * (right - left), 1.0, 0.5 * (bottom - top)));
+	vec3 normal = normalize(vec3(2.0 * (right - left), 4.0, 2.0 * (bottom - top)));
   v_normalVec = u_normalMatrix * normal;
 
   v_eyeVec = -eyePosition.xyz;

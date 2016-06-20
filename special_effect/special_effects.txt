@@ -1,6 +1,8 @@
 Heightmap:
 
-The heightmap uses a plane with several vertexes. This vertices are maniplulated with the heightmap.
-To get these we use the function getHeight(a_texCoord); For a better texturing we use a ratio to 
-get a smoother surface. For the lighting of the surface we using als components of the heightmap
-and calculate with these componets a offset, which we set to the eyePosition.
+We use a plane with several vertexes. These vertices are maniplulated by the heightmap shader.
+In the shader we get the color of the heightmap texture and use the red channel value as height.
+We then apply a mulitplier and a bias to get the height range of [-0.25, 0.25].
+All of this is happening inside a function called getHeight.
+To calculate the normal of the current vertex, we get it's neighbouring pixels height.
+In the fragment shader we apply the texture and lighting.

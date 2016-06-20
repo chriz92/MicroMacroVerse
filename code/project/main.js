@@ -300,7 +300,7 @@ canvas.addEventListener('mouseup', function(event){
       else{
         //when switching to manual mode, set animation time to 0 and camera position in front of the three scenes
         animationTime = 0;
-        camera.position = [0,0,10];
+        camera.position = [60,0,10];
       }
     }
   });

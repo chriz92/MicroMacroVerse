@@ -7,7 +7,7 @@
     var animatedAngle = 0;
     var globalTime = 0;
     var animationTime = 0;
-    var reverseTime = 0;
+
     var scene = 0;
     var scenePositions = [
       [-60, 0, 60],
@@ -189,6 +189,7 @@ function init(resources) {
   rootNode.append(earthNode);
   rootNode.append(atomNode);
   initInteraction(gl.canvas);
+  camera.position = [-60, 0, 42];
 }
 
 function createCubeMap(pos_x, neg_x, pos_y, neg_y, pos_z, neg_z) {

@@ -16,8 +16,8 @@
     ]
     var sceneViewPoint =[
       [-60, 0, 42],
-      [0,-10,60],
-      [60,-10,50]
+      [10,-10,60],
+      [85,0,70],
     ]
 
     const camera = {
@@ -110,8 +110,9 @@ function updateCamera(context, delta){
             scene = 0;
         }
         camera.position = sceneViewPoint[scene];
-        if(scene == 3){
-          camera.rotation.y -=20;
+        if(scene == 0){
+          camera.rotation.y = 0;
+          camera.rotation.x = 0;
         }
       }
     }
